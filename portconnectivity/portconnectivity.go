@@ -1,10 +1,10 @@
 package portconnectivity
 
 import (
-	"log"
 	"net"
 	"srvchecker/srv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -13,66 +13,74 @@ import (
 type PortsResult struct {
 	Ip    string
 	Fqdn  string
-	ports map[string]bool
+	Ports map[string]bool
+	ServName string
 }
+
+func (p *PortsResult) Init(ip string, fqdn string, servname string) {
+	p.Ip = ip
+	p.Fqdn = fqdn
+	p.ServName = servname
+}
+
+func (p *PortsResult) Run(ip string, port string, result chan PortsResult) {
+	timeout := time.Second
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
+	
+	if err != nil {
+		p.Ports = map[string]bool{port:false}
+		
+	}
+	if conn != nil {
+		defer conn.Close()
+		p.Ports = map[string]bool{port:true}
+	}
+	result <- *p
+}
+
 
 type PortsResults []PortsResult
 
+func (p *PortsResults)handleResults(input chan PortsResult, wg *sync.WaitGroup) {
+	for result := range input {
+		*p = append(*p, result)
+		wg.Done()
+	}
+}
+
 
 func (p *PortsResults) Connectivity(srvresults srv.SRVResults){
-	for k,v := range srvresults {
-		if k=="mra" {
-			for _, entry := range v {
+
+	input := make(chan PortsResult)
+	var wg sync.WaitGroup
+	go p.handleResults(input, &wg)
+
+	for _,v := range srvresults {
+		for _, entry := range v {
+			if entry.ServName == "mra" {
 				for _, ip := range entry.Ips {
 					if strings.Contains(ip, ".") {
 						pconn := new(PortsResult)
-						pconn.Ip = ip
-						pconn.Fqdn = entry.Fqdn
+						pconn.Init(ip, entry.Fqdn, entry.ServName)
 						for _, port := range []string{entry.Port, "5060", "5061", "5222"} {
-							log.Println(ip,":",port)
-
-							timeout := time.Second
-							conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
-							
-							if err != nil {
-								pconn.ports = map[string]bool{port:false}
-								
-							}
-							if conn != nil {
-								defer conn.Close()
-								pconn.ports = map[string]bool{port:true}
-							}
-
-
+							wg.Add(1)
+							go pconn.Run(ip, port, input)
 						}
-						*p = append((*p), *pconn)
 					}
 				}
-			}
-		} else {
-			for _, entry := range v {
+			} else {
 				for _, ip := range entry.Ips {
 					if strings.Contains(ip, ".") {
 						pconn := new(PortsResult)
-						pconn.Ip = ip
-						pconn.Fqdn = entry.Fqdn
-						timeout := time.Second
-						conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, entry.Port), timeout)
-						
-						if err != nil {
-							pconn.ports = map[string]bool{entry.Port:false}
-							
-						}
-						if conn != nil {
-							defer conn.Close()
-							pconn.ports = map[string]bool{entry.Port:true}
-						}
-						log.Println(ip,":",entry.Port)
-						*p = append((*p), *pconn)
+						pconn.Init(ip, entry.Fqdn, entry.ServName)
+						wg.Add(1)
+						go pconn.Run(ip, entry.Port, input)
 					}
 				}
 			}
 		}
 	}
+	wg.Wait()
+	close(input)
 }
 

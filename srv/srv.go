@@ -102,11 +102,9 @@ func (s *SRVResults) GetForDomain(domain string) {
 	s.Init()
 	mysrvs.Init(domain)
 	input := make(chan SrvResult)
-	output := make(chan SRVResults)
 	var wg sync.WaitGroup
 
-	go s.handleResults(input, output, &wg)
-	defer close(output)
+	go s.handleResults(input, &wg)
 
 	for _, srv := range *mysrvs {
 		mySrvResult := new(SrvResult)
@@ -128,7 +126,7 @@ func (s *SRVResults) GetForDomain(domain string) {
 	
 }
 
-func (s *SRVResults)handleResults(input chan SrvResult, output chan SRVResults, wg *sync.WaitGroup) {
+func (s *SRVResults)handleResults(input chan SrvResult, wg *sync.WaitGroup) {
 	for result := range input {
 		(*s)[result.Cname] = append((*s)[result.Cname], result)
 		wg.Done()

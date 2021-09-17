@@ -2,6 +2,7 @@ package portconnectivity
 
 import (
 	// "log"
+	"log"
 	"srvchecker/srv"
 	"testing"
 
@@ -13,18 +14,13 @@ func TestPortconnectivity(t *testing.T) {
 	srvresults := new(srv.SRVResults)
 	srvresults.GetForDomain("verizon.com")
 	var portsResults PortsResults
-	portsResults.Connectivity(*srvresults)
+	portsResults.Connectivity(*srvresults, )
 
 
-	// for k, res := range *srvresults {
-	// 	log.Println("=================")
-	// 	log.Println(k)
-	// 	for _,r := range res {
-	// 		log.Println(r.Fqdn, r.Ips, r.Port , r.Priority, r.Weight)
-
-	// 	}
-	// }
-	assert.Equal(t, "8443", portsResults[0].ports)
+	for _, res := range portsResults {
+		log.Println(res.Fqdn, res.Ip, res.Ports)
+	}
+	assert.Equal(t, "8443", portsResults[0].Ports)
 	t.Fail()
 
 }
