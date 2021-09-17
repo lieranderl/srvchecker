@@ -17,7 +17,7 @@ func main(){
 		log.Println("=================")
 		log.Println(k)
 		for _,r := range res {
-			log.Println(r.Fqdn, r.Ips, r.Port , r.Priority, r.Weight)
+			log.Println(r.ServName, r.Fqdn, r.Ips, r.Port, r.Priority, r.Weight)
 		}
 	}
 }
