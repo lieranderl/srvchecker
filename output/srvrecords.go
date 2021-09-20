@@ -67,20 +67,22 @@ func MakeDiscoveredSRVrecordsMap(discoveredsrv []Srv, discoveredcert []Cert, cha
 	dslist := make([]DiscoveredSRVrecords, 0)
 
 	for _, srv := range discoveredsrv {
-		discoveredSRVrecords := new(DiscoveredSRVrecords)
-		discoveredSRVrecords.Cname = srv.Cname
-		discoveredSRVrecords.Service = srv.Service
-		for _, fqdn := range srv.Fqdns {
-			discFqdn := new(DiscoveredFqdn)
-			discFqdn.Name = fqdn.Name
-			for _, ip := range fqdn.Ips {
-				discIp := new(DiscoveredIp)
-				discIp.Init(ip, discoveredcert)
-				discFqdn.Ips = append(discFqdn.Ips, *discIp)
+		if !(strings.HasPrefix(srv.Cname, "_cisco-uds") || strings.HasPrefix(srv.Cname, "_cuplogin")) {
+			discoveredSRVrecords := new(DiscoveredSRVrecords)
+			discoveredSRVrecords.Cname = srv.Cname
+			discoveredSRVrecords.Service = srv.Service
+			for _, fqdn := range srv.Fqdns {
+				discFqdn := new(DiscoveredFqdn)
+				discFqdn.Name = fqdn.Name
+				for _, ip := range fqdn.Ips {
+					discIp := new(DiscoveredIp)
+					discIp.Init(ip, discoveredcert)
+					discFqdn.Ips = append(discFqdn.Ips, *discIp)
+				}
+				discoveredSRVrecords.Fqdns = append(discoveredSRVrecords.Fqdns, *discFqdn)
 			}
-			discoveredSRVrecords.Fqdns = append(discoveredSRVrecords.Fqdns, *discFqdn)
+			dslist = append(dslist, *discoveredSRVrecords) 
 		}
-		dslist = append(dslist, *discoveredSRVrecords) 
 	}
 	channel <- dslist
 }

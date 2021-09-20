@@ -51,15 +51,17 @@ type SrvResult struct {
 	Fqdn     string
 	Ips      []string
 	Port     string
+	Proto	 string	
 	Priority string
 	Weight   string
 	ServName string
 }
 
-func (s *SrvResult) fetch(servname string, cname string, fqdn string, ips []string, port uint16, priority uint16, weight uint16) {
+func (s *SrvResult) fetch(servname string, cname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
 	s.Cname = cname
 	s.Fqdn = fqdn
 	s.Ips = ips
+	s.Proto = proto
 	s.ServName = servname
 	if port == 0 {
 		s.Port = ""
@@ -71,13 +73,13 @@ func (s *SrvResult) fetch(servname string, cname string, fqdn string, ips []stri
 }
 
 
-func (s *SrvResult) fetchAddr(addr *net.SRV, cname string, servname string, result chan SrvResult) {
+func (s *SrvResult) fetchAddr(addr *net.SRV, cname string, servname string, proto string, result chan SrvResult) {
 	ips, err := net.LookupHost(addr.Target)
 	if err != nil {
-		s.fetch(servname, cname, addr.Target, []string{"A record not configured"}, 0, 0, 0)
+		s.fetch(servname, cname, addr.Target, []string{"A record not configured"}, 0, proto, 0, 0)
 	} 
 	if len(ips)>0 {
-		s.fetch(servname, cname, addr.Target, ips, addr.Port, addr.Priority, addr.Weight)
+		s.fetch(servname, cname, addr.Target, ips, addr.Port, proto, addr.Priority, addr.Weight)
 	}
 	result <- *s
 }
@@ -105,12 +107,12 @@ func (s *SRVResults) ForDomain(domain string) {
 		_, addrs, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
 		if err != nil {
 			wg.Add(1)
-			mySrvResult.fetch(srv.servName, cname, "SRV record not configured", []string{""}, 0, 0, 0)
+			mySrvResult.fetch(srv.servName, cname, "SRV record not configured", []string{""}, 0, srv.proto, 0, 0)
 			input <- *mySrvResult
 		} else {
 			for _, addr := range addrs {
 				wg.Add(1)
-				go mySrvResult.fetchAddr(addr, cname, srv.servName, input)
+				go mySrvResult.fetchAddr(addr, cname, srv.servName, srv.proto, input)
 			}
 		}
 	}

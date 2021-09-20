@@ -59,9 +59,9 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
 				if pres.Udp {
-					myPort.Proto = "UDP"
+					myPort.Proto = "udp"
 				} else {
-					myPort.Proto = "TCP"
+					myPort.Proto = "tcp"
 				}
 				// myPort.Certs = pres.Certs
 				cert := new(Cert)
@@ -78,9 +78,9 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
 				if pres.Udp {
-					myPort.Proto = "UDP"
+					myPort.Proto = "udp"
 				} else {
-					myPort.Proto = "TCP"
+					myPort.Proto = "tcp"
 				}
 				// myPort.Certs = pres.Certs
 				cert := new(Cert)
@@ -103,9 +103,9 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
 				if pres.Udp {
-					myPort.Proto = "UDP"
+					myPort.Proto = "udp"
 				} else {
-					myPort.Proto = "TCP"
+					myPort.Proto = "tcp"
 				}
 				// myPort.Certs = pres.Certs
 				cert := new(Cert)
@@ -128,9 +128,9 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
 				if pres.Udp {
-					myPort.Proto = "UDP"
+					myPort.Proto = "udp"
 				} else {
-					myPort.Proto = "TCP"
+					myPort.Proto = "tcp"
 				}
 				// myPort.Certs = pres.Certs
 				cert := new(Cert)

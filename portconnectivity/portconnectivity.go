@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	
 	"log"
 	"net"
 	"srvchecker/srv"
@@ -32,20 +33,26 @@ func (p *PortsResult) Init(ip string, fqdn string, servname string) {
 	p.ServName = servname
 }
 
-func (p *PortsResult) Run(ip string, port string, result chan PortsResult) {
-	timeout := time.Second
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
-	
-	if err != nil {
-		p.Port = map[string]bool{port:false}	
-	}
-	if conn != nil {
-		defer conn.Close()
-		p.Port = map[string]bool{port:true}
-		if (port == "8443" || port== "5061") {
-			p.GetCert(ip , port)
+func (p *PortsResult) Run(ip string, port string, proto string, result chan PortsResult) {
+	if proto == "tcp" {
+		timeout := time.Second
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
+		
+		if err != nil {
+			p.Port = map[string]bool{port:false}	
 		}
+		if conn != nil {
+			defer conn.Close()
+			p.Port = map[string]bool{port:true}
+			if (port == "8443" || port== "5061") {
+				p.GetCert(ip , port)
+			}
+		}
+	} else {
+		p.Port = map[string]bool{port:true}
+		p.Udp = true
 	}
+	
 	result <- *p
 }
 
@@ -143,13 +150,14 @@ func (p *PortsResults) Connectivity(srvresults srv.SRVResults){
 							pconn := new(PortsResult)
 							pconn.Init(ip, entry.Fqdn, entry.ServName)
 							wg.Add(1)
-							go pconn.Run(ip, port, input)
+							go pconn.Run(ip, port, entry.Proto, input)
+							
 						}
 						for _, port := range admin_known_ports {
 							pconn := new(PortsResult)
 							pconn.Init(ip, entry.Fqdn, "admin")
 							wg.Add(1)
-							go pconn.Run(ip, port, input)
+							go pconn.Run(ip, port, "tcp", input)
 						}
 						for _, turnport := range turn_ports {
 							udp := false
@@ -171,12 +179,12 @@ func (p *PortsResults) Connectivity(srvresults srv.SRVResults){
 						pconn := new(PortsResult)
 						pconn.Init(ip, entry.Fqdn, entry.ServName)
 						wg.Add(1)
-						go pconn.Run(ip, entry.Port, input)
+						go pconn.Run(ip, entry.Port, entry.Proto, input)
 						for _, port := range admin_known_ports {
 							pconn := new(PortsResult)
 							pconn.Init(ip, entry.Fqdn, "admin")
 							wg.Add(1)
-							go pconn.Run(ip, port, input)
+							go pconn.Run(ip, port, "tcp", input)
 						}
 						for _, turnport := range turn_ports {
 							udp := false
