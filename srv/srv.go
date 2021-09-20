@@ -7,12 +7,12 @@ import (
 	"sync"
 )
 
-var mra_srv = []string{"_collab-edge._tls", "_cuplogin._tcp", "_cisco-uds._tcp"}
-var b2b_srv = []string{"_h323cs._tcp", "_sip._tcp", "_sips._tcp", "_sip._udp", "_h323ls._udp"}
-var xmpp_fed_srv = []string{"_xmpp-server._tcp"}
-var cma_srv = []string{"_xmpp-client._tcp"}
-var spark_srv = []string{"_sips._tcp.sipmtls"}
-var mssip_srv = []string{"_sipfederationtls._tcp"}
+var mra_srv = []string{"_collab-edge:_tls", "_cuplogin:_tcp", "_cisco-uds:_tcp"}
+var b2b_srv = []string{"_h323cs:_tcp", "_sip:_tcp", "_sips:_tcp", "_sip:_udp", "_h323ls:_udp"}
+var xmpp_fed_srv = []string{"_xmpp-server:_tcp"}
+var cma_srv = []string{"_xmpp-client:_tcp"}
+var spark_srv = []string{"_sips:_tcp.sipmtls"}
+var mssip_srv = []string{"_sipfederationtls:_tcp"}
 var srvtextlist = map[string][]string{
 	"mra":mra_srv, 
 	"b2b":b2b_srv,
@@ -37,7 +37,7 @@ func (s *inputSRVlist) Init(domain string) {
 	for k, vl := range srvtextlist {
 		isrv.servName = k
 		for _, v := range vl {
-			ii := strings.Split(v, ".")
+			ii := strings.Split(v, ":")
 			isrv.service = strings.TrimPrefix(ii[0], "_")
 			isrv.proto = strings.TrimPrefix(ii[1], "_")
 			*s = append(*s, isrv)
@@ -66,23 +66,15 @@ func (s *SrvResult) fetch(servname string, cname string, fqdn string, ips []stri
 	} else {
 		s.Port = fmt.Sprint(port)
 	}
-	if priority == 0 {
-		s.Priority = ""
-	} else {
-		s.Priority = fmt.Sprint(priority)
-	}
-	if weight == 0 {
-		s.Weight = ""
-	} else {
-		s.Weight = fmt.Sprint(weight)
-	}
+	s.Priority = fmt.Sprint(priority)
+	s.Weight = fmt.Sprint(weight)
 }
 
 
 func (s *SrvResult) fetchAddr(addr *net.SRV, cname string, servname string, result chan SrvResult) {
 	ips, err := net.LookupHost(addr.Target)
 	if err != nil {
-		s.fetch(servname, cname, addr.Target, []string{"IP address is not resolved"}, 0, 0, 0)
+		s.fetch(servname, cname, addr.Target, []string{"A record not configured"}, 0, 0, 0)
 	} else {
 		s.fetch(servname, cname, addr.Target, ips, addr.Port, addr.Priority, addr.Weight)
 	}
@@ -112,7 +104,7 @@ func (s *SRVResults) GetForDomain(domain string) {
 		_, addrs, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
 		if err != nil {
 			wg.Add(1)
-			mySrvResult.fetch(srv.servName, cname, "SRV record not configured.", []string{""}, 0, 0, 0)
+			mySrvResult.fetch(srv.servName, cname, "SRV record not configured", []string{""}, 0, 0, 0)
 			input <- *mySrvResult
 		} else {
 			for _, addr := range addrs {
