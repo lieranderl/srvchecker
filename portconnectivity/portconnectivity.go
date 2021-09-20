@@ -25,6 +25,7 @@ type PortsResult struct {
 	Certs 	    []*x509.Certificate
 }
 
+
 func (p *PortsResult) Init(ip string, fqdn string, servname string) {
 	p.Ip = ip
 	p.Fqdn = fqdn

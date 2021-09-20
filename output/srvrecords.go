@@ -1,7 +1,6 @@
 package output
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -29,25 +28,31 @@ type DiscoveredIp struct {
 	Cert DiscoveredCert
 }
 
-func (discIp *DiscoveredIp) Init(ip Ip) {
+func (discIp *DiscoveredIp) Init(ip Ip, discoveredcert []Cert, ) {
 	discIp.Ip = ip.Ip
 	discIp.Priority = ip.Priority
 	discIp.Weight = ip.Weight
 	discIp.PortNum = ip.SrvPort.Num
 	discIp.PortOpen = ip.SrvPort.Open
 	discIp.PortType = ip.SrvPort.Proto
-	if len(ip.SrvPort.Certs) > 0 {
-		discIp.Cert = DiscoveredCert{CN: ip.SrvPort.Certs[0].Subject.CommonName,
-			Issuer: ip.SrvPort.Certs[0].Issuer.CommonName,
-			SAN: strings.Join(ip.SrvPort.Certs[0].DNSNames, ", "),
-			NotAfter: ip.SrvPort.Certs[0].NotAfter.String(),
-			NotBefore: ip.SrvPort.Certs[0].NotBefore.String(),
+
+	for _, cert := range discoveredcert {
+		if (cert.Ip == ip.Ip && cert.Port == ip.SrvPort.Num) {
+			if len(cert.Certs) > 0 {
+				discIp.Cert = DiscoveredCert{CN: cert.Certs[0].Subject.CommonName,
+					Issuer: cert.Certs[0].Issuer.CommonName,
+					SAN: strings.Join(cert.Certs[0].DNSNames, ", "),
+					NotAfter: cert.Certs[0].NotAfter.String(),
+					NotBefore: cert.Certs[0].NotBefore.String(),
+				}
+			}
 		}
 	}
 }
 
 type DiscoveredFqdn struct {
 	Name string
+	Service string
 	Ips []DiscoveredIp
 }
 
@@ -58,30 +63,24 @@ type DiscoveredSRVrecords struct {
 }
 
 
-func MakeDiscoveredSRVrecordsMap(discoveredsrv []Srv) map[string]DiscoveredSRVrecords {
-	DiscoveredSRVrecordsMap := make(map[string]DiscoveredSRVrecords)
+func MakeDiscoveredSRVrecordsMap(discoveredsrv []Srv, discoveredcert []Cert, channel chan []DiscoveredSRVrecords)  {
+	dslist := make([]DiscoveredSRVrecords, 0)
 
 	for _, srv := range discoveredsrv {
-		fmt.Println(srv.Service, srv.Cname)
 		discoveredSRVrecords := new(DiscoveredSRVrecords)
 		discoveredSRVrecords.Cname = srv.Cname
 		discoveredSRVrecords.Service = srv.Service
 		for _, fqdn := range srv.Fqdns {
-			fmt.Println(fqdn.Name)
 			discFqdn := new(DiscoveredFqdn)
 			discFqdn.Name = fqdn.Name
 			for _, ip := range fqdn.Ips {
 				discIp := new(DiscoveredIp)
-				if len(ip.SrvPort.Certs) > 0 {
-					fmt.Println(ip.Ip, ip.Priority , ip.Weight, ip.SrvPort.Num, ip.SrvPort.Open, "Cert:", ip.SrvPort.Certs[0].Subject.CommonName)
-					discIp.Init(ip)
-				}
+				discIp.Init(ip, discoveredcert)
 				discFqdn.Ips = append(discFqdn.Ips, *discIp)
 			}
 			discoveredSRVrecords.Fqdns = append(discoveredSRVrecords.Fqdns, *discFqdn)
 		}
-		DiscoveredSRVrecordsMap[srv.Cname] = *discoveredSRVrecords
+		dslist = append(dslist, *discoveredSRVrecords) 
 	}
-	return DiscoveredSRVrecordsMap
-	
+	channel <- dslist
 }

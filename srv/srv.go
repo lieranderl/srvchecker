@@ -75,7 +75,8 @@ func (s *SrvResult) fetchAddr(addr *net.SRV, cname string, servname string, resu
 	ips, err := net.LookupHost(addr.Target)
 	if err != nil {
 		s.fetch(servname, cname, addr.Target, []string{"A record not configured"}, 0, 0, 0)
-	} else {
+	} 
+	if len(ips)>0 {
 		s.fetch(servname, cname, addr.Target, ips, addr.Port, addr.Priority, addr.Weight)
 	}
 	result <- *s
@@ -89,7 +90,7 @@ func (s *SRVResults) Init() {
 }
 
 
-func (s *SRVResults) GetForDomain(domain string) {
+func (s *SRVResults) ForDomain(domain string) {
 	mysrvs := new(inputSRVlist)
 	s.Init()
 	mysrvs.Init(domain)

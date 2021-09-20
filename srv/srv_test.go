@@ -9,7 +9,7 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(SRVResults)
-	srvresults.GetForDomain("verizon.com")
+	srvresults.ForDomain("verizon.com")
 
 	if val, ok := (*srvresults)["_collab-edge._tls.verizon.com"]; ok {
 		for _, v:= range val {

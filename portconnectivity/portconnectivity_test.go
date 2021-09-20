@@ -11,7 +11,7 @@ import (
 func TestPortconnectivity(t *testing.T) {
 
 	srvresults := new(srv.SRVResults)
-	srvresults.GetForDomain("verizon.com")
+	srvresults.ForDomain("verizon.com")
 	var portsResults PortsResults
 	portsResults.Connectivity(*srvresults)
 

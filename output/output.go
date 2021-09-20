@@ -41,6 +41,115 @@ type Port struct {
 	Certs []*x509.Certificate
 }
 
+type Cert struct {
+	Service string
+	Cname string
+	Ip string
+	Port string
+	Certs []*x509.Certificate
+}
+
+func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, myIp *Ip) []Cert {
+
+	certlist :=  make([]Cert, 0)
+
+	if (pres.ServName == sr.ServName) {
+		for p, v := range pres.Port {
+			if p==sr.Port {
+				myPort.Num = p
+				myPort.Open = strconv.FormatBool(v)
+				if pres.Udp {
+					myPort.Proto = "UDP"
+				} else {
+					myPort.Proto = "TCP"
+				}
+				// myPort.Certs = pres.Certs
+				cert := new(Cert)
+				cert.Cname = sr.Cname
+				cert.Service = sr.ServName
+				cert.Certs = pres.Certs
+				cert.Ip = myIp.Ip
+				cert.Port = p
+				certlist = append(certlist, *cert)
+				myPort.Service = pres.ServName
+				myIp.SrvPort = *myPort	
+				break
+			} else {
+				myPort.Num = p
+				myPort.Open = strconv.FormatBool(v)
+				if pres.Udp {
+					myPort.Proto = "UDP"
+				} else {
+					myPort.Proto = "TCP"
+				}
+				// myPort.Certs = pres.Certs
+				cert := new(Cert)
+				cert.Cname = sr.Cname
+				cert.Service = sr.ServName
+				cert.Certs = pres.Certs
+				cert.Ip = myIp.Ip
+				cert.Port = p
+				certlist = append(certlist, *cert)
+				myPort.Service = pres.ServName
+				myIp.AdditionalServicePorts = append(myIp.AdditionalServicePorts, *myPort)
+				break
+			} 
+		}
+
+	}
+	if (pres.ServName == "turn") {
+		if !checkportinlist(myIp.TurnPorts, pres.Port) {
+			for p, v := range pres.Port {
+				myPort.Num = p
+				myPort.Open = strconv.FormatBool(v)
+				if pres.Udp {
+					myPort.Proto = "UDP"
+				} else {
+					myPort.Proto = "TCP"
+				}
+				// myPort.Certs = pres.Certs
+				cert := new(Cert)
+				cert.Cname = sr.Cname
+				cert.Service = sr.ServName
+				cert.Certs = pres.Certs
+				cert.Ip = myIp.Ip
+				cert.Port = p
+				certlist = append(certlist, *cert)
+				myPort.Service = pres.ServName
+				myIp.TurnPorts = append(myIp.TurnPorts, *myPort)
+				break
+			}
+		}
+		
+	}
+	if (pres.ServName == "admin"){
+		if !checkportinlist(myIp.AdminPorts, pres.Port) {
+			for p, v := range pres.Port {
+				myPort.Num = p
+				myPort.Open = strconv.FormatBool(v)
+				if pres.Udp {
+					myPort.Proto = "UDP"
+				} else {
+					myPort.Proto = "TCP"
+				}
+				// myPort.Certs = pres.Certs
+				cert := new(Cert)
+				cert.Cname = sr.Cname
+				cert.Service = sr.ServName
+				cert.Certs = pres.Certs
+				cert.Ip = myIp.Ip
+				cert.Port = p
+				certlist = append(certlist, *cert)
+				myPort.Service = pres.ServName
+				myIp.AdminPorts = append(myIp.AdminPorts, *myPort)
+				break
+			}
+		}
+	}
+	return certlist
+}
+
+
 
 func checkportinlist(ports []Port, port map[string]bool) bool {
 	for _, p := range ports {
@@ -64,12 +173,11 @@ func stringInSlice(a string, list []string) bool {
 }
 
 
-
-func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResults) {
-
+func makeFullSrvStruct(srvresults srv.SRVResults, portsresults portconnectivity.PortsResults) (*[]Srv, *[]Cert) {
 	var discoveredsrv []Srv
+	var discoveredcerts []Cert
 
-	for cname, srvres:=range *srvresults {
+	for cname, srvres:=range srvresults {
 		mysrv := new(Srv)
 		mysrv.Cname = cname
 		fqdns := make([]Fqdn,0)
@@ -78,7 +186,6 @@ func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResu
 				mysrv.Service = sr.ServName
 				myfqdn := new(Fqdn)
 				ips := make([]Ip,0)
-				
 				for _, ip := range sr.Ips {
 					myIp := new(Ip)
 					myIp.Ip = ip
@@ -86,111 +193,43 @@ func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResu
 					myIp.Weight = sr.Weight
 
 					if strings.Contains(ip, ".") {
-						for _, pres := range *portsresults{
+						for _, pres := range portsresults{
 							myPort := new(Port)
-							
 							if pres.Ip == ip {
-								if (pres.ServName == sr.ServName) {
-									for p, v := range pres.Port {
-										if p==sr.Port {
-											myPort.Num = p
-											myPort.Open = strconv.FormatBool(v)
-											if pres.Udp {
-												myPort.Proto = "UDP"
-											} else {
-												myPort.Proto = "TCP"
-											}
-											myPort.Certs = pres.Certs
-											myPort.Service = pres.ServName
-											myIp.SrvPort = *myPort	
-											break
-										} else {
-											myPort.Num = p
-											myPort.Open = strconv.FormatBool(v)
-											if pres.Udp {
-												myPort.Proto = "UDP"
-											} else {
-												myPort.Proto = "TCP"
-											}
-											myPort.Certs = pres.Certs
-											myPort.Service = pres.ServName
-											myIp.AdditionalServicePorts = append(myIp.AdditionalServicePorts, *myPort)
-											break
-										} 
-									}
-
-								}
-								if (pres.ServName == "turn") {
-									if !checkportinlist(myIp.TurnPorts, pres.Port) {
-										for p, v := range pres.Port {
-											myPort.Num = p
-											myPort.Open = strconv.FormatBool(v)
-											if pres.Udp {
-												myPort.Proto = "UDP"
-											} else {
-												myPort.Proto = "TCP"
-											}
-											myPort.Certs = pres.Certs
-											myPort.Service = pres.ServName
-											myIp.TurnPorts = append(myIp.TurnPorts, *myPort)
-											break
-										}
-									}
-									
-								}
-								if (pres.ServName == "admin"){
-									if !checkportinlist(myIp.AdminPorts, pres.Port) {
-										for p, v := range pres.Port {
-											myPort.Num = p
-											myPort.Open = strconv.FormatBool(v)
-											if pres.Udp {
-												myPort.Proto = "UDP"
-											} else {
-												myPort.Proto = "TCP"
-											}
-											myPort.Certs = pres.Certs
-											myPort.Service = pres.ServName
-											myIp.AdminPorts = append(myIp.AdminPorts, *myPort)
-											break
-										}
-									}
-								}
-
+								certttt := myPort.Fetch(pres, sr, myIp)
+								discoveredcerts = append(discoveredcerts, certttt...)
+								
 							}
 						}
 						ips = append(ips, *myIp)
 					}
-					
 				}
-
 				myfqdn.Service = sr.ServName
 				myfqdn.Name = sr.Fqdn
 				myfqdn.Ips = ips
-
 				fqdns = append(fqdns, *myfqdn)
-
 			}
 		}
 		mysrv.Fqdns = fqdns
 		discoveredsrv = append(discoveredsrv, *mysrv)
 	}
+	return &discoveredsrv, &discoveredcerts
+}
 
 
-	DiscoveredSRVrecordsMap := MakeDiscoveredSRVrecordsMap(discoveredsrv)
+func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResults) {
+	srvChan := make(chan []DiscoveredSRVrecords)
+	undiscoveredSrvChan := make(chan []DiscoveredSRVrecords)
+	tcpconnChan := make(chan []Fqdn)
 
-	// fmt.Println("=====================")
-	// fmt.Println("SRV records that should not resolve")
-	// for _, srv := range discoveredsrv {
-	// 	if strings.HasPrefix(srv.Cname, "_cisco-uds") || strings.HasPrefix(srv.Cname, "_cuplogin") {
-	// 		for _, fqdn := range srv.Fqdns {
-	// 			if fqdn.Name != "SRV record not configured" {
-	// 				fmt.Println(fqdn.Service, srv.Cname, "Pizda")
-	// 			} else {
-	// 				fmt.Println(fqdn.Service, srv.Cname, "Not resolvable")
-	// 			}
-	// 		}
-	// 	}
-	// }
+	discoveredsrv, discoveredcrt := makeFullSrvStruct(*srvresults, *portsresults)
+	go MakeDiscoveredSRVrecordsMap(*discoveredsrv, *discoveredcrt, srvChan)
+	go MakeUndiscoveredSrv(*discoveredsrv, undiscoveredSrvChan)
+	go MakeTcpConnectivity(*discoveredsrv, tcpconnChan)
+	discoveredSRVrecordsMap := <- srvChan
+	undiscoveredSrv := <- undiscoveredSrvChan
+	tcpconn := <- tcpconnChan
+
 
 	// fmt.Println("===================")
 	// fmt.Println("TCP Connectivity:")
@@ -249,15 +288,29 @@ func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResu
 
 	fmt.Println("JJJJJJJJSSSOOOOOOONNNN")
 
-	b, err := json.Marshal(DiscoveredSRVrecordsMap)
+	fmt.Println("============SRV=========")
+	b, err := json.Marshal(discoveredSRVrecordsMap)
 	if err != nil {
         fmt.Printf("Error: %s", err)
         return;
     }
     fmt.Println(string(b))
 
+	fmt.Println("============Undescover MRA=========")
+	b, err = json.Marshal(undiscoveredSrv)
+	if err != nil {
+        fmt.Printf("Error: %s", err)
+        return;
+    }
+    fmt.Println(string(b))
 
+	fmt.Println("===========Connectivity=========")
+	b, err = json.Marshal(tcpconn)
+	if err != nil {
+        fmt.Printf("Error: %s", err)
+        return;
+    }
+    fmt.Println(string(b))
 	
-
 
 }
