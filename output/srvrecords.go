@@ -29,6 +29,23 @@ type DiscoveredIp struct {
 	Cert DiscoveredCert
 }
 
+func (discIp *DiscoveredIp) Init(ip Ip) {
+	discIp.Ip = ip.Ip
+	discIp.Priority = ip.Priority
+	discIp.Weight = ip.Weight
+	discIp.PortNum = ip.SrvPort.Num
+	discIp.PortOpen = ip.SrvPort.Open
+	discIp.PortType = ip.SrvPort.Proto
+	if len(ip.SrvPort.Certs) > 0 {
+		discIp.Cert = DiscoveredCert{CN: ip.SrvPort.Certs[0].Subject.CommonName,
+			Issuer: ip.SrvPort.Certs[0].Issuer.CommonName,
+			SAN: strings.Join(ip.SrvPort.Certs[0].DNSNames, ", "),
+			NotAfter: ip.SrvPort.Certs[0].NotAfter.String(),
+			NotBefore: ip.SrvPort.Certs[0].NotBefore.String(),
+		}
+	}
+}
+
 type DiscoveredFqdn struct {
 	Name string
 	Ips []DiscoveredIp
@@ -41,14 +58,12 @@ type DiscoveredSRVrecords struct {
 }
 
 
-
-
 func MakeDiscoveredSRVrecordsMap(discoveredsrv []Srv) map[string]DiscoveredSRVrecords {
 	DiscoveredSRVrecordsMap := make(map[string]DiscoveredSRVrecords)
 
 	for _, srv := range discoveredsrv {
-		discoveredSRVrecords := new(DiscoveredSRVrecords)
 		fmt.Println(srv.Service, srv.Cname)
+		discoveredSRVrecords := new(DiscoveredSRVrecords)
 		discoveredSRVrecords.Cname = srv.Cname
 		discoveredSRVrecords.Service = srv.Service
 		for _, fqdn := range srv.Fqdns {
@@ -59,28 +74,7 @@ func MakeDiscoveredSRVrecordsMap(discoveredsrv []Srv) map[string]DiscoveredSRVre
 				discIp := new(DiscoveredIp)
 				if len(ip.SrvPort.Certs) > 0 {
 					fmt.Println(ip.Ip, ip.Priority , ip.Weight, ip.SrvPort.Num, ip.SrvPort.Open, "Cert:", ip.SrvPort.Certs[0].Subject.CommonName)
-					discIp.Ip = ip.Ip
-					discIp.Priority = ip.Priority
-					discIp.Weight = ip.Weight
-					discIp.PortNum = ip.SrvPort.Num
-					discIp.PortOpen = ip.SrvPort.Open
-					discIp.PortType = ip.SrvPort.Proto
-					
-					discIp.Cert = DiscoveredCert{CN: ip.SrvPort.Certs[0].Subject.CommonName,
-						Issuer: ip.SrvPort.Certs[0].Issuer.CommonName,
-						SAN: strings.Join(ip.SrvPort.Certs[0].DNSNames, ", "),
-						NotAfter: ip.SrvPort.Certs[0].NotAfter.String(),
-						NotBefore: ip.SrvPort.Certs[0].NotBefore.String(),
-					}
-				} else {
-					discIp.Ip = ip.Ip
-					discIp.Priority = ip.Priority
-					discIp.Weight = ip.Weight
-					discIp.PortNum = ip.SrvPort.Num
-					discIp.PortOpen = ip.SrvPort.Open
-					discIp.PortType = ip.SrvPort.Proto
-					
-					fmt.Println(ip.Ip, ip.Priority , ip.Weight, ip.SrvPort.Num, ip.SrvPort.Open)
+					discIp.Init(ip)
 				}
 				discFqdn.Ips = append(discFqdn.Ips, *discIp)
 			}

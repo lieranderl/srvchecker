@@ -178,73 +178,73 @@ func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResu
 
 	DiscoveredSRVrecordsMap := MakeDiscoveredSRVrecordsMap(discoveredsrv)
 
-	fmt.Println("=====================")
-	fmt.Println("SRV records that should not resolve")
-	for _, srv := range discoveredsrv {
-		if strings.HasPrefix(srv.Cname, "_cisco-uds") || strings.HasPrefix(srv.Cname, "_cuplogin") {
-			for _, fqdn := range srv.Fqdns {
-				if fqdn.Name != "SRV record not configured" {
-					fmt.Println(fqdn.Service, srv.Cname, "Pizda")
-				} else {
-					fmt.Println(fqdn.Service, srv.Cname, "Not resolvable")
-				}
-			}
-		}
-	}
+	// fmt.Println("=====================")
+	// fmt.Println("SRV records that should not resolve")
+	// for _, srv := range discoveredsrv {
+	// 	if strings.HasPrefix(srv.Cname, "_cisco-uds") || strings.HasPrefix(srv.Cname, "_cuplogin") {
+	// 		for _, fqdn := range srv.Fqdns {
+	// 			if fqdn.Name != "SRV record not configured" {
+	// 				fmt.Println(fqdn.Service, srv.Cname, "Pizda")
+	// 			} else {
+	// 				fmt.Println(fqdn.Service, srv.Cname, "Not resolvable")
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	fmt.Println("===================")
-	fmt.Println("TCP Connectivity:")
-	fqdn_list := make([]string, 0)
-	for _, srv := range discoveredsrv {
-		for _, fqdn := range srv.Fqdns {
-			for _, ip := range fqdn.Ips {
-				if !stringInSlice(fqdn.Name, fqdn_list) {
-					fmt.Println(fqdn.Service, ip.Service, fqdn.Name, ip.Ip) 
-					fmt.Println(ip.SrvPort.Num, ip.SrvPort.Open)
-					for _, p := range ip.AdditionalServicePorts {
-						fmt.Println(p.Num, p.Open)
-					}
+	// fmt.Println("===================")
+	// fmt.Println("TCP Connectivity:")
+	// fqdn_list := make([]string, 0)
+	// for _, srv := range discoveredsrv {
+	// 	for _, fqdn := range srv.Fqdns {
+	// 		for _, ip := range fqdn.Ips {
+	// 			if !stringInSlice(fqdn.Name, fqdn_list) {
+	// 				fmt.Println(fqdn.Service, ip.Service, fqdn.Name, ip.Ip) 
+	// 				fmt.Println(ip.SrvPort.Num, ip.SrvPort.Open)
+	// 				for _, p := range ip.AdditionalServicePorts {
+	// 					fmt.Println(p.Num, p.Open)
+	// 				}
 					
-				}
-			}
-			fqdn_list = append(fqdn_list, fqdn.Name)
-		}
-	}
+	// 			}
+	// 		}
+	// 		fqdn_list = append(fqdn_list, fqdn.Name)
+	// 	}
+	// }
 
-	fmt.Println("===================")
+	// fmt.Println("===================")
 
-	fmt.Println("Admin ports:")
-	fqdn_list = make([]string, 0)
-	for _, srv := range discoveredsrv {
-		for _, fqdn := range srv.Fqdns {
-			for _, ip := range fqdn.Ips {
-				if !stringInSlice(fqdn.Name, fqdn_list) {
-					fmt.Println(fqdn.Service, ip.Service, fqdn.Name, ip.Ip) 
-					for _, p := range ip.AdminPorts {
-						fmt.Println(p.Num, p.Open)
-					}
-				}
-			}
-			fqdn_list = append(fqdn_list, fqdn.Name)
-		}
-	}
-	fmt.Println("===================")
+	// fmt.Println("Admin ports:")
+	// fqdn_list = make([]string, 0)
+	// for _, srv := range discoveredsrv {
+	// 	for _, fqdn := range srv.Fqdns {
+	// 		for _, ip := range fqdn.Ips {
+	// 			if !stringInSlice(fqdn.Name, fqdn_list) {
+	// 				fmt.Println(fqdn.Service, ip.Service, fqdn.Name, ip.Ip) 
+	// 				for _, p := range ip.AdminPorts {
+	// 					fmt.Println(p.Num, p.Open)
+	// 				}
+	// 			}
+	// 		}
+	// 		fqdn_list = append(fqdn_list, fqdn.Name)
+	// 	}
+	// }
+	// fmt.Println("===================")
 
-	fmt.Println("TURN connectivity:")
-	fqdn_list = make([]string, 0)
-	for _, srv := range discoveredsrv {
-		for _, fqdn := range srv.Fqdns {
-			for _, ip := range fqdn.Ips {
-				if !stringInSlice(fqdn.Name, fqdn_list) {
-					fmt.Println(fqdn.Service, fqdn.Name, ip.Ip) 
-					for _, p := range ip.TurnPorts {
-						fmt.Println(p.Num, p.Open, p.Proto)
-					}
-				}
-			}
-			fqdn_list = append(fqdn_list, fqdn.Name)
-		}
-	}
+	// fmt.Println("TURN connectivity:")
+	// fqdn_list = make([]string, 0)
+	// for _, srv := range discoveredsrv {
+	// 	for _, fqdn := range srv.Fqdns {
+	// 		for _, ip := range fqdn.Ips {
+	// 			if !stringInSlice(fqdn.Name, fqdn_list) {
+	// 				fmt.Println(fqdn.Service, fqdn.Name, ip.Ip) 
+	// 				for _, p := range ip.TurnPorts {
+	// 					fmt.Println(p.Num, p.Open, p.Proto)
+	// 				}
+	// 			}
+	// 		}
+	// 		fqdn_list = append(fqdn_list, fqdn.Name)
+	// 	}
+	// }
 
 
 	fmt.Println("JJJJJJJJSSSOOOOOOONNNN")
