@@ -39,14 +39,14 @@ type Ip struct {
 type Fqdns map[string]*Ip
 
 type SrvResult struct {
-	Sname    string
-	Fqdn     Fqdns
-	Port     string
-	Proto	 string	
+	Sname    		string
+	Fqdn     		Fqdns
+	Port     		string
+	Proto	 		string	
 }
 
-type SrvResults map[string]*SrvResult
 
+type SrvResults map[string]*SrvResult
 
 
 func (s *inputSRVlist) Init(domain string) {
@@ -67,18 +67,17 @@ func (s *inputSRVlist) Init(domain string) {
 func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
 	ip := new(Ip)
 	ip.Ips = ips
+	s.Proto = proto
+	s.Sname = servname
 	ip.Priority = fmt.Sprint(priority)
 	ip.Weight = fmt.Sprint(weight)
 	s.Fqdn[fqdn] = ip
-	
-	s.Proto = proto
-	s.Sname = servname
-	
 	if port == 0 {
 		s.Port = ""
 	} else {
 		s.Port = fmt.Sprint(port)
 	}
+
 }
 
 

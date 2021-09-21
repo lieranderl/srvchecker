@@ -11,7 +11,7 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(SRVResults)
-	srvresults.ForDomain("vodafone.com")
+	srvresults.ForDomain("tp.ciscotac.net")
 
 	fmt.Println(srvresults)
 
