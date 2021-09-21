@@ -31,6 +31,24 @@ type inputSRV struct {
 
 type inputSRVlist []inputSRV
 
+type Ip struct {
+	Ips 	[]string
+	Priority string
+	Weight   string
+}
+type Fqdns map[string]*Ip
+
+type SrvResult struct {
+	Sname    string
+	Fqdn     Fqdns
+	Port     string
+	Proto	 string	
+}
+
+type SrvResults map[string]*SrvResult
+
+
+
 func (s *inputSRVlist) Init(domain string) {
 	var isrv inputSRV
 	isrv.domain = domain
@@ -46,49 +64,46 @@ func (s *inputSRVlist) Init(domain string) {
 }
 
 
-type SrvResult struct {
-	Cname 	 string
-	Fqdn     string
-	Ips      []string
-	Port     string
-	Proto	 string	
-	Priority string
-	Weight   string
-	ServName string
-}
-
-func (s *SrvResult) fetch(servname string, cname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
-	s.Cname = cname
-	s.Fqdn = fqdn
-	s.Ips = ips
+func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
+	ip := new(Ip)
+	ip.Ips = ips
+	ip.Priority = fmt.Sprint(priority)
+	ip.Weight = fmt.Sprint(weight)
+	s.Fqdn[fqdn] = ip
+	
 	s.Proto = proto
-	s.ServName = servname
+	s.Sname = servname
+	
 	if port == 0 {
 		s.Port = ""
 	} else {
 		s.Port = fmt.Sprint(port)
 	}
-	s.Priority = fmt.Sprint(priority)
-	s.Weight = fmt.Sprint(weight)
 }
 
 
-func (s *SrvResult) fetchAddr(addr *net.SRV, cname string, servname string, proto string, result chan SrvResult) {
-	ips, err := net.LookupHost(addr.Target)
+func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, servname string, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
+	var mutex = &sync.RWMutex{}
+	ips, err := net.LookupHost(fqdn.Target)
 	if err != nil {
-		s.fetch(servname, cname, addr.Target, []string{"A record not configured"}, 0, proto, 0, 0)
+		mutex.Lock()
+		newRes.fetch(servname, fqdn.Target, []string{"A record not configured"}, 0, proto, fqdn.Priority, fqdn.Weight)
+		mutex.Unlock()
 	} 
 	if len(ips)>0 {
-		s.fetch(servname, cname, addr.Target, ips, addr.Port, proto, addr.Priority, addr.Weight)
+		mutex.Lock()
+		newRes.fetch(servname, fqdn.Target, ips, fqdn.Port, proto, fqdn.Priority, fqdn.Weight)
+		mutex.Unlock()
 	}
-	result <- *s
+	(*s)[cname] = *newRes
+	wg.Done()
 }
 
 
-type SRVResults map[string][]SrvResult
+type SRVResults map[string]SrvResult
 
 func (s *SRVResults) Init() {
-	*s= make(map[string][]SrvResult)
+	*s= make(map[string]SrvResult)
 }
 
 
@@ -97,33 +112,33 @@ func (s *SRVResults) ForDomain(domain string) {
 	s.Init()
 	mysrvs.Init(domain)
 	input := make(chan SrvResult)
+	var mutex = &sync.RWMutex{}
+
 	var wg sync.WaitGroup
 
-	go s.handleResults(input, &wg)
-
 	for _, srv := range *mysrvs {
-		mySrvResult := new(SrvResult)
+		proto := "udp"
+		if strings.HasPrefix(srv.proto, "t") {
+			proto = "tcp"
+		}
 		cname := "_"+srv.service+"._"+srv.proto+"."+srv.domain
-		_, addrs, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
+		mySrvResult := new(SrvResult)
+		mySrvResult.Fqdn = make(Fqdns)
+
+		_, fqdns, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
 		if err != nil {
-			wg.Add(1)
-			mySrvResult.fetch(srv.servName, cname, "SRV record not configured", []string{""}, 0, srv.proto, 0, 0)
-			input <- *mySrvResult
+			mutex.Lock()
+			mySrvResult.fetch(srv.servName, "SRV record not configured", []string{""}, 0, proto, 0, 0)
+			mutex.Unlock()
+			(*s)[cname] = *mySrvResult
 		} else {
-			for _, addr := range addrs {
+			for _, fqdn := range fqdns {
 				wg.Add(1)
-				go mySrvResult.fetchAddr(addr, cname, srv.servName, srv.proto, input)
+				go s.fetchAddr(cname, fqdn, srv.servName, proto, mySrvResult, &wg)
 			}
 		}
 	}
 	wg.Wait()
 	close(input)
 	
-}
-
-func (s *SRVResults)handleResults(input chan SrvResult, wg *sync.WaitGroup) {
-	for result := range input {
-		(*s)[result.Cname] = append((*s)[result.Cname], result)
-		wg.Done()
-	}
 }

@@ -2,30 +2,42 @@ package srv
 
 import (
 	// "log"
+	"fmt"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSrv(t *testing.T) {
 
 	srvresults := new(SRVResults)
-	srvresults.ForDomain("verizon.com")
+	srvresults.ForDomain("vodafone.com")
 
-	if val, ok := (*srvresults)["_collab-edge._tls.verizon.com"]; ok {
-		for _, v:= range val {
-			if v.Fqdn == "ohtwbgcolec12p2.verizon.com." {
-				assert.Equal(t, "8443", v.Port)
-				assert.Equal(t, "1", v.Priority)
-				assert.Equal(t, "10", v.Weight)
-				assert.Equal(t, []string{"137.188.103.13"}, v.Ips)
-			}
+	fmt.Println(srvresults)
+
+
+	if val, ok := (*srvresults)["_h323ls._udp.vodafone.com"]; ok {
+		
+		assert.Equal(t, "udp", val.Proto)
+		assert.Equal(t, "b2b", val.Sname)
+		assert.Equal(t, "1719", val.Port)
+
+		fqdns := make([]string, 0) 
+		ips := make([][]string, 0)
+		priority := make([]string,0)
+		weight := make([]string,0)
+		for k,v := range val.Fqdn {
+			fqdns = append(fqdns, k)
+			ips = append(ips, v.Ips)
+			priority = append(priority, v.Priority)
+			weight = append(weight, v.Weight)
 		}
-	} else {
-		t.Fail()
-	}
+		assert.Equal(t, []string([]string{"vcs.vodafone.com.", "bc.vodafone.com."}), fqdns)
+		assert.Equal(t, []string{"10", "1"}, priority)
+		assert.Equal(t, []string{"50", "0"}, weight)
+		assert.Equal(t, [][]string([][]string{[]string{"A record not configured"}, []string{"195.232.251.6"}}), ips)
 
-	if val, ok := (*srvresults)["_sips._tcp.verizon.com"]; ok {
-		assert.Equal(t, "SRV record not configured.", val[0].Fqdn)
+
 	} else {
 		t.Fail()
 	}

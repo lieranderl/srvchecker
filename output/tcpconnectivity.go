@@ -1,17 +1,37 @@
 package output
 
+import "strings"
 
-func MakeTcpConnectivity(discoveredsrv []Srv, channel chan []Fqdn){
-	fqdntcpconnectivity_list := make([]Fqdn,0)
-	fqdn_list := make([]string, 0)
+// type DiscoveredPort struct {
+// 	Fqdn string
+// 	Ip string
+// 	Ports []map[string]bool
+// }
+
+type DiscoveredPort map[string]map[string]map[string]string
+
+func MakeTcpConnectivity(discoveredsrv []Srv, channel chan DiscoveredPort){
+	
+	discoveredPort := make(DiscoveredPort)
 	for _, srv := range discoveredsrv {
 		for _, fqdn := range srv.Fqdns {
-			if !stringInSlice(fqdn.Name, fqdn_list) {
-				fqdntcpconnectivity_list = append(fqdntcpconnectivity_list, fqdn)
+			if strings.Contains(fqdn.Name, ".") {
+				if _, ok := discoveredPort[fqdn.Name]; !ok {
+					discoveredPort[fqdn.Name] = make(map[string]map[string]string)
+				}
+				for _, ip := range fqdn.Ips {
+					if ip.SrvPort.Proto == "tcp" {
+						if _, ok := discoveredPort[fqdn.Name][ip.Ip]; !ok {
+							discoveredPort[fqdn.Name][ip.Ip] = make(map[string]string)
+						}
+						discoveredPort[fqdn.Name][ip.Ip][ip.SrvPort.Num] = ip.SrvPort.Open
+					}
+				}
 			}
-			fqdn_list = append(fqdn_list, fqdn.Name)
 		}
 	}
 
-	channel <- fqdntcpconnectivity_list
+	channel <- discoveredPort
 }
+
+

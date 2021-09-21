@@ -2,8 +2,6 @@ package output
 
 import (
 	"crypto/x509"
-	"encoding/json"
-	"fmt"
 	"srvchecker/portconnectivity"
 	"srvchecker/srv"
 	"strconv"
@@ -98,7 +96,7 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 
 	}
 	if (pres.ServName == "turn") {
-		if !checkportinlist(myIp.TurnPorts, pres.Port) {
+		if !checkportinlist(myIp.TurnPorts, pres) {
 			for p, v := range pres.Port {
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
@@ -123,7 +121,7 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 		
 	}
 	if (pres.ServName == "admin"){
-		if !checkportinlist(myIp.AdminPorts, pres.Port) {
+		if !checkportinlist(myIp.AdminPorts, pres) {
 			for p, v := range pres.Port {
 				myPort.Num = p
 				myPort.Open = strconv.FormatBool(v)
@@ -151,10 +149,16 @@ func (myPort *Port) Fetch(pres portconnectivity.PortsResult, sr srv.SrvResult, m
 
 
 
-func checkportinlist(ports []Port, port map[string]bool) bool {
+func checkportinlist(ports []Port, pres portconnectivity.PortsResult) bool {
+	
+
 	for _, p := range ports {
-		for k := range port {
-			if p.Num == k {
+		prrr:=false 
+		if p.Proto == "udp" {
+			prrr = true
+		} 
+		for k := range pres.Port {
+			if p.Num == k && prrr == pres.Udp{
 				return true 
 			}
 		}
@@ -217,10 +221,10 @@ func makeFullSrvStruct(srvresults srv.SRVResults, portsresults portconnectivity.
 }
 
 
-func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResults) {
+func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResults) ([]DiscoveredSRVrecords,[]DiscoveredSRVrecords, DiscoveredPort){
 	srvChan := make(chan []DiscoveredSRVrecords)
 	undiscoveredSrvChan := make(chan []DiscoveredSRVrecords)
-	tcpconnChan := make(chan []Fqdn)
+	tcpconnChan := make(chan DiscoveredPort)
 
 	discoveredsrv, discoveredcrt := makeFullSrvStruct(*srvresults, *portsresults)
 	go MakeDiscoveredSRVrecordsMap(*discoveredsrv, *discoveredcrt, srvChan)
@@ -286,31 +290,26 @@ func Output(srvresults *srv.SRVResults, portsresults *portconnectivity.PortsResu
 	// }
 
 
-	fmt.Println("JJJJJJJJSSSOOOOOOONNNN")
-
-	fmt.Println("============SRV=========")
-	b, err := json.Marshal(discoveredSRVrecordsMap)
-	if err != nil {
-        fmt.Printf("Error: %s", err)
-        return;
-    }
-    fmt.Println(string(b))
-
-	fmt.Println("============Undescover MRA=========")
-	b, err = json.Marshal(undiscoveredSrv)
-	if err != nil {
-        fmt.Printf("Error: %s", err)
-        return;
-    }
-    fmt.Println(string(b))
-
-	fmt.Println("===========Connectivity=========")
-	b, err = json.Marshal(tcpconn)
-	if err != nil {
-        fmt.Printf("Error: %s", err)
-        return;
-    }
-    fmt.Println(string(b))
 	
+	// srv, err := json.Marshal(discoveredSRVrecordsMap)
+	// if err != nil {
+    //     fmt.Printf("Error: %s", err)
+    // }
+    // // fmt.Println(string(b))
+
+	// nosrv, err := json.Marshal(undiscoveredSrv)
+	// if err != nil {
+    //     fmt.Printf("Error: %s", err)
+    // }
+    // // fmt.Println(string(b))
+
+	// connectivity, err := json.Marshal(tcpconn)
+	// if err != nil {
+    //     fmt.Printf("Error: %s", err)
+    // }
+    // fmt.Println(string(b))
+	
+	// return string(srv), string(nosrv), string(connectivity)
+	return discoveredSRVrecordsMap, undiscoveredSrv, tcpconn
 
 }
