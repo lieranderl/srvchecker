@@ -2,6 +2,7 @@ package srv
 
 import (
 	// "log"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -11,12 +12,15 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(SRVResults)
-	srvresults.ForDomain("tp.ciscotac.net")
+	srvresults.ForDomain("verizon.com")
 
-	fmt.Println(srvresults)
+	nosrv, err := json.Marshal(srvresults)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+	}
+	fmt.Println(string(nosrv))
 
-
-	if val, ok := (*srvresults)["_h323ls._udp.vodafone.com"]; ok {
+	if val, ok := (*srvresults)["_sips._tcp.tp.ciscotac.net"]; ok {
 		
 		// assert.Equal(t, "udp", val.Proto)
 		assert.Equal(t, "b2b", val.Sname)
@@ -27,6 +31,7 @@ func TestSrv(t *testing.T) {
 		priority := make([]string,0)
 		weight := make([]string,0)
 		ports := make([]Port, 0)
+		open := make([]bool,0)
 		for k,v := range val.Fqdn {
 			fqdns = append(fqdns, k)
 			priority = append(priority, v.Priority)
@@ -35,43 +40,23 @@ func TestSrv(t *testing.T) {
 			for ip, port := range v.Ips {
 				ips = append(ips, string(ip))
 				ports = append(ports, *port)
+				open = append(open, (*port)["5061:tcp"].IsOpen)
 			}
 		}
+
+		
+
+
 		assert.Equal(t, []Fqdn([]Fqdn{"vcs.vodafone.com.", "bc.vodafone.com."}), fqdns)
 		assert.Equal(t, []string{"10", "1"}, priority)
 		assert.Equal(t, []string{"50", "0"}, weight)
 		assert.Equal(t, []string([]string{"A record not configured", "195.232.251.6"}), ips)
 		assert.Equal(t, []string{}, ports)
-
+		assert.Equal(t, []string{}, open)
 
 	} else {
 		t.Fail()
 	}
-
-	assert.Equal(t, "b2b", val.Sname)
-		// assert.Equal(t, "1719", val.Port)
-
-	fqdns := make([]Fqdn, 0) 
-	ips := make([]string, 0)
-	priority := make([]string,0)
-	weight := make([]string,0)
-	ports := make([]Port, 0)
-	for k,v := range val.Fqdn {
-		fqdns = append(fqdns, k)
-		priority = append(priority, v.Priority)
-		weight = append(weight, v.Weight)
-		
-		for ip, port := range v.Ips {
-			ips = append(ips, string(ip))
-			ports = append(ports, *port)
-		}
-	}
-	fmt.Println(fqdns)
-	fmt.Println(priority)
-	fmt.Println(weight)
-	fmt.Println(ips)
-	fmt.Println(ports)
-
 
 
 	// for k, res := range *srvresults {

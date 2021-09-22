@@ -121,7 +121,9 @@ func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint1
 			if proto == "tcp" {
 				wg.Add(1)
 				go (*myips.Ips[Ip(ip)])[pi].connect_cert(ip, fmt.Sprint(port), &wg)
-			} 
+			} else {
+				(*myips.Ips[Ip(ip)])[pi].IsOpen = true
+			}
 		}
 
 	} 
@@ -151,14 +153,14 @@ func GetCert(ip string, port string) []*x509.Certificate {
 func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, servname string, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
 	ips, err := net.LookupHost(fqdn.Target)
 	if err != nil {
-		mutex.Lock()
+		// mutex.Lock()
 		newRes.fetch(servname, fqdn.Target, []string{"A record not configured"}, 0, proto, fqdn.Priority, fqdn.Weight)
-		mutex.Unlock()
+		// mutex.Unlock()
 	} 
 	if len(ips)>0 {
-		mutex.Lock()
+		// mutex.Lock()
 		newRes.fetch(servname, fqdn.Target, ips, fqdn.Port, proto, fqdn.Priority, fqdn.Weight)
-		mutex.Unlock()
+		// mutex.Unlock()
 	}
 	(*s)[cname] = *newRes
 	wg.Done()
