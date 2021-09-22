@@ -1,28 +1,22 @@
 package portconnectivity
 
 import (
-	"log"
+	"fmt"
 	"srvchecker/srv"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestPortconnectivity(t *testing.T) {
-
 	srvresults := new(srv.SRVResults)
-	srvresults.ForDomain("verizon.com")
-	var portsResults PortsResults
-	portsResults.Connectivity(*srvresults)
+	srvresults.ForDomain("vodafone.com")
 
-	for _, res := range portsResults {
-		if res.Fqdn == "ohtwbgcolec14p2.verizon.com." {
-			assert.Equal(t, map[string]bool{"5061": true}, res.Port)
-			assert.Equal(t, "mssip", res.ServName)
-			assert.Equal(t, "137.188.103.17", res.Ip)
-		}
-		log.Println(res.Fqdn, res.Ip, res.Port)
-	}
+	var portsResults PortsResults
+	portsResults.fetchFromSrvResults(srvresults)
+
+	fmt.Println(srvresults)
+	fmt.Println(portsResults)
+	
+	t.Fail()
 
 }
 

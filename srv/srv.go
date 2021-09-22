@@ -1,12 +1,17 @@
 package srv
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
+var mutex = &sync.RWMutex{}
 var mra_srv = []string{"_collab-edge:_tls", "_cuplogin:_tcp", "_cisco-uds:_tcp"}
 var b2b_srv = []string{"_h323cs:_tcp", "_sip:_tcp", "_sips:_tcp", "_sip:_udp", "_h323ls:_udp"}
 var xmpp_fed_srv = []string{"_xmpp-server:_tcp"}
@@ -31,22 +36,39 @@ type inputSRV struct {
 
 type inputSRVlist []inputSRV
 
-type Ip struct {
-	Ips 	[]string
+type Ip string
+type Ips struct {
+	Ips 	 map[Ip]*Port
 	Priority string
 	Weight   string
 }
-type Fqdns map[string]*Ip
+type portnum string
+type portproto string
+
+type Portidenty string
+func GetPortidenty(portnum portnum,portproto portproto) Portidenty {
+	return Portidenty(string(portnum) + ":" + string(portproto))
+}
+
+
+type Port map[Portidenty]*PortStatus
+type PortStatus struct {
+	IsOpen			bool
+	// Cert 			[]*x509.Certificate	
+	Cert string
+}
+
+
+type Fqdn string
+type Fqdns map[Fqdn]*Ips
 
 type SrvResult struct {
 	Sname    		string
 	Fqdn     		Fqdns
-	Port     		string
-	Proto	 		string	
 }
 
-
-type SrvResults map[string]*SrvResult
+type Cname string
+type SrvResults map[Cname]*SrvResult
 
 
 func (s *inputSRVlist) Init(domain string) {
@@ -63,26 +85,70 @@ func (s *inputSRVlist) Init(domain string) {
 	}
 }
 
-
-func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
-	ip := new(Ip)
-	ip.Ips = ips
-	s.Proto = proto
-	s.Sname = servname
-	ip.Priority = fmt.Sprint(priority)
-	ip.Weight = fmt.Sprint(weight)
-	s.Fqdn[fqdn] = ip
-	if port == 0 {
-		s.Port = ""
-	} else {
-		s.Port = fmt.Sprint(port)
+func (ps *PortStatus)connect_cert(ip string, port string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	timeout := time.Second
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
+	if err != nil {
+		ps.IsOpen = false
 	}
-
+	if conn != nil {
+		defer conn.Close()
+		ps.IsOpen = true
+		if (port == "8443" || port== "5061") {
+			ps.Cert = GetCert(ip , fmt.Sprint(port))[0].Issuer.CommonName
+		}
+	}
 }
 
 
+func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
+	myips := new(Ips)
+	s.Sname = servname
+	myips.Priority = fmt.Sprint(priority)
+	myips.Weight = fmt.Sprint(weight)
+	var wg sync.WaitGroup
+
+	
+	for _, ip := range ips {
+		if _, ok := myips.Ips[Ip(ip)]; !ok {
+			myips.Ips = make(map[Ip]*Port)
+		}
+		pi := GetPortidenty(portnum(fmt.Sprint(port)), portproto(proto))
+		myips.Ips[Ip(ip)] = &Port{pi:new(PortStatus)}
+
+		if port != 0 {
+			if proto == "tcp" {
+				wg.Add(1)
+				go (*myips.Ips[Ip(ip)])[pi].connect_cert(ip, fmt.Sprint(port), &wg)
+			} 
+		}
+
+	} 
+	wg.Wait()
+
+	s.Fqdn[Fqdn(fqdn)] = myips
+
+	
+}
+
+func GetCert(ip string, port string) []*x509.Certificate {
+	conf := &tls.Config{
+        InsecureSkipVerify: true,
+    }
+    conn, err := tls.Dial("tcp", ip+":"+port, conf)
+	conn.SetDeadline(time.Now().Add(2 * time.Second))
+    if err != nil {
+        log.Println("Error in Dial", err)
+    }
+	if conn != nil {
+		defer conn.Close()
+		return conn.ConnectionState().PeerCertificates
+	}
+    return nil
+}
+
 func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, servname string, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
-	var mutex = &sync.RWMutex{}
 	ips, err := net.LookupHost(fqdn.Target)
 	if err != nil {
 		mutex.Lock()
@@ -111,7 +177,6 @@ func (s *SRVResults) ForDomain(domain string) {
 	s.Init()
 	mysrvs.Init(domain)
 	input := make(chan SrvResult)
-	var mutex = &sync.RWMutex{}
 
 	var wg sync.WaitGroup
 
@@ -139,5 +204,4 @@ func (s *SRVResults) ForDomain(domain string) {
 	}
 	wg.Wait()
 	close(input)
-	
 }
