@@ -1,6 +1,7 @@
 package portconnectivity
 
 import (
+	"encoding/json"
 	"fmt"
 	"srvchecker/srv"
 	"testing"
@@ -13,8 +14,18 @@ func TestPortconnectivity(t *testing.T) {
 	var portsResults PortsResults
 	portsResults.fetchFromSrvResults(srvresults)
 
-	fmt.Println(srvresults)
-	fmt.Println(portsResults)
+
+	nosrv, err := json.Marshal(srvresults)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+	}
+	fmt.Println(string(nosrv))
+
+	nosrv, err = json.Marshal(portsResults)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+	}
+	fmt.Println(string(nosrv))
 	
 	t.Fail()
 

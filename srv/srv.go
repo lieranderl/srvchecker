@@ -102,35 +102,37 @@ func (ps *PortStatus)connect_cert(ip string, port string, wg *sync.WaitGroup) {
 }
 
 
-func (s *SrvResult) fetch(servname string, fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
-	myips := new(Ips)
-	s.Sname = servname
-	myips.Priority = fmt.Sprint(priority)
-	myips.Weight = fmt.Sprint(weight)
-	var wg sync.WaitGroup
+func (s *SrvResult) fetch(fqdn string, ips []string, port uint16, proto string, priority uint16, weight uint16) {
+	if strings.Contains(fqdn, ".") {
+		myips := new(Ips)
+		myips.Priority = fmt.Sprint(priority)
+		myips.Weight = fmt.Sprint(weight)
+		var wg sync.WaitGroup
+		myips.Ips = make(map[Ip]*Port)
 
-	
-	for _, ip := range ips {
-		if _, ok := myips.Ips[Ip(ip)]; !ok {
-			myips.Ips = make(map[Ip]*Port)
-		}
-		pi := GetPortidenty(portnum(fmt.Sprint(port)), portproto(proto))
-		myips.Ips[Ip(ip)] = &Port{pi:new(PortStatus)}
+		for _, ip := range ips {
+			if len(ip)>0 {
+				myips.Ips[Ip(ip)] = &Port{}
+				if strings.Contains(ip, ".") {
+					pi := GetPortidenty(portnum(fmt.Sprint(port)), portproto(proto))
+					myips.Ips[Ip(ip)] = &Port{pi:new(PortStatus)}
 
-		if port != 0 {
-			if proto == "tcp" {
-				wg.Add(1)
-				go (*myips.Ips[Ip(ip)])[pi].connect_cert(ip, fmt.Sprint(port), &wg)
-			} else {
-				(*myips.Ips[Ip(ip)])[pi].IsOpen = true
+					if port != 0 {
+						if proto == "tcp" {
+							wg.Add(1)
+							go (*myips.Ips[Ip(ip)])[pi].connect_cert(ip, fmt.Sprint(port), &wg)
+						} else {
+							(*myips.Ips[Ip(ip)])[pi].IsOpen = true
+						}
+					}
+				}
 			}
-		}
-
-	} 
-	wg.Wait()
-
-	s.Fqdn[Fqdn(fqdn)] = myips
-
+		} 
+		wg.Wait()
+		s.Fqdn[Fqdn(fqdn)] = myips
+	} else {
+		s.Fqdn[Fqdn(fqdn)] = &Ips{}
+	}
 	
 }
 
@@ -150,16 +152,16 @@ func GetCert(ip string, port string) []*x509.Certificate {
     return nil
 }
 
-func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, servname string, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
+func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
 	ips, err := net.LookupHost(fqdn.Target)
 	if err != nil {
 		// mutex.Lock()
-		newRes.fetch(servname, fqdn.Target, []string{"A record not configured"}, 0, proto, fqdn.Priority, fqdn.Weight)
+		newRes.fetch(fqdn.Target, []string{"A record not configured"}, 0, proto, fqdn.Priority, fqdn.Weight)
 		// mutex.Unlock()
 	} 
 	if len(ips)>0 {
 		// mutex.Lock()
-		newRes.fetch(servname, fqdn.Target, ips, fqdn.Port, proto, fqdn.Priority, fqdn.Weight)
+		newRes.fetch(fqdn.Target, ips, fqdn.Port, proto, fqdn.Priority, fqdn.Weight)
 		// mutex.Unlock()
 	}
 	(*s)[cname] = *newRes
@@ -190,17 +192,18 @@ func (s *SRVResults) ForDomain(domain string) {
 		cname := "_"+srv.service+"._"+srv.proto+"."+srv.domain
 		mySrvResult := new(SrvResult)
 		mySrvResult.Fqdn = make(Fqdns)
+		mySrvResult.Sname = srv.servName
 
 		_, fqdns, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
 		if err != nil {
 			mutex.Lock()
-			mySrvResult.fetch(srv.servName, "SRV record not configured", []string{""}, 0, proto, 0, 0)
+			mySrvResult.fetch("SRV record not configured", []string{""}, 0, proto, 0, 0)
 			mutex.Unlock()
 			(*s)[cname] = *mySrvResult
 		} else {
 			for _, fqdn := range fqdns {
 				wg.Add(1)
-				go s.fetchAddr(cname, fqdn, srv.servName, proto, mySrvResult, &wg)
+				go s.fetchAddr(cname, fqdn, proto, mySrvResult, &wg)
 			}
 		}
 	}

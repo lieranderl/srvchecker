@@ -12,7 +12,7 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(SRVResults)
-	srvresults.ForDomain("verizon.com")
+	srvresults.ForDomain("vodafone.com")
 
 	nosrv, err := json.Marshal(srvresults)
 	if err != nil {
@@ -20,11 +20,8 @@ func TestSrv(t *testing.T) {
 	}
 	fmt.Println(string(nosrv))
 
-	if val, ok := (*srvresults)["_sips._tcp.tp.ciscotac.net"]; ok {
-		
-		// assert.Equal(t, "udp", val.Proto)
+	if val, ok := (*srvresults)["_sips._tcp.vodafone.com"]; ok {
 		assert.Equal(t, "b2b", val.Sname)
-		// assert.Equal(t, "1719", val.Port)
 
 		fqdns := make([]Fqdn, 0) 
 		ips := make([]string, 0)

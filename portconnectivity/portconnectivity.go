@@ -6,8 +6,11 @@ import (
 
 	// "log"
 	// "net"
+	"net"
 	"srvchecker/srv"
 	"strings"
+	"sync"
+	"time"
 	// "strings"
 	// "sync"
 	// "time"
@@ -41,52 +44,61 @@ type Port struct {
 type PortsResults map[Fqdn]map[Ip]map[string]*Port
 
 func (p *PortsResults)fetchFromSrvResults(srvres *srv.SRVResults) {
+	var wg sync.WaitGroup
 	(*p) = make(map[Fqdn]map[Ip]map[string]*Port)
 	for _, srvresult := range *srvres {
 		for fqdn, ips := range srvresult.Fqdn {
-			if _, ok := (*p)[Fqdn(fqdn)]; !ok {
-				(*p)[Fqdn(fqdn)] = make(map[Ip]map[string]*Port)
-			}
-			for _, ip := range ips.Ips {
-				if strings.Contains(ip, ".") {
-					if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)] ; !ok {
-						(*p)[Fqdn(fqdn)][Ip(ip)] = make(map[string]*Port)
-					}
-					if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][srvresult.Port+":"+srvresult.Proto] ; !ok {
-						(*p)[Fqdn(fqdn)][Ip(ip)][srvresult.Port+":"+srvresult.Proto] = new(Port)
-					}
-					(*p)[Fqdn(fqdn)][Ip(ip)][srvresult.Port+":"+srvresult.Proto].IsOpened = srvresult.IsOpen
-					(*p)[Fqdn(fqdn)][Ip(ip)][srvresult.Port+":"+srvresult.Proto].Sname = srvresult.Sname
+			if strings.Contains(string(fqdn), ".") {
+				for ip, port := range ips.Ips {
+					if strings.Contains(string(ip), ".") {
+						wg.Add(1)
+						go p.FetchPorts(fqdn, ip, port, srvresult.Sname, &wg)
 
-					if srvresult.Sname == "mra" {
-						for _, port := range []string{"5061", "5222"} {
-							if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
-								(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
-							}
-							(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = false
-							(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = srvresult.Sname
-
-						}
-					}
-					for _, port := range admin_known_ports {
-						if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] ; !ok {
-							(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] = new(Port)
-						}
-						(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = false
-						(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = srvresult.Sname
-					}
-					for _, port := range turn_ports {
-						if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
-							(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
-						}
-						(*p)[Fqdn(fqdn)][Ip(ip)][port].IsOpened = false
-						(*p)[Fqdn(fqdn)][Ip(ip)][port].Sname = srvresult.Sname
+					// 	if _, ok := (*p)[Fqdn(fqdn)]; !ok {
+					// 		(*p)[Fqdn(fqdn)] = make(map[Ip]map[string]*Port)
+					// 	}
+					// 	if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)] ; !ok {
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)] = make(map[string]*Port)
+					// 	}
+					// 	for potuniq, pp := range *port {
+					// 		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)] ; !ok {
+					// 			(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)] = new(Port)
+					// 		}
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)].IsOpened = pp.IsOpen
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)].Sname = srvresult.Sname
+					// 	}
+						
+					// 	if srvresult.Sname == "mra" {
+					// 		for _, port := range []string{"5061", "5222"} {
+					// 			if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
+					// 				(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+					// 			}
+					// 			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = false
+					// 			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = srvresult.Sname
+	
+					// 		}
+					// 	}
+					// 	for _, port := range admin_known_ports {
+					// 		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] ; !ok {
+					// 			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] = new(Port)
+					// 		}
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = false
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = srvresult.Sname
+					// 	}
+					// 	for _, port := range turn_ports {
+					// 		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
+					// 			(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+					// 		}
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][port].IsOpened = false
+					// 		(*p)[Fqdn(fqdn)][Ip(ip)][port].Sname = srvresult.Sname
+					// 	}
 					}
 				}
-				
 			}
+			
 		}
 	}
+	wg.Wait()
 }
 
 
@@ -96,28 +108,63 @@ func (p *PortsResults)fetchFromSrvResults(srvres *srv.SRVResults) {
 // 	p.Sname = servname
 // }
 
-// func (p *PortsResult) Run(ip string, port string, proto string, result chan PortsResult) {
-// 	if proto == "tcp" {
-// 		timeout := time.Second
-// 		conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
-		
-// 		if err != nil {
-// 			p.Port = map[string]bool{port:false}	
-// 		}
-// 		if conn != nil {
-// 			defer conn.Close()
-// 			p.Port = map[string]bool{port:true}
-// 			if (port == "8443" || port== "5061") {
-// 				p.GetCert(ip , port)
-// 			}
-// 		}
-// 	} else {
-// 		p.Port = map[string]bool{port:true}
-// 		p.Udp = true
-// 	}
+func (p *PortsResults)FetchPorts(fqdn srv.Fqdn, ip srv.Ip, port *srv.Port, sname string, wg *sync.WaitGroup){
 	
-// 	result <- *p
-// }
+	defer wg.Done()
+	if _, ok := (*p)[Fqdn(fqdn)]; !ok {
+		(*p)[Fqdn(fqdn)] = make(map[Ip]map[string]*Port)
+	}
+	if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)] ; !ok {
+		(*p)[Fqdn(fqdn)][Ip(ip)] = make(map[string]*Port)
+	}
+	for potuniq, pp := range *port {
+		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)] ; !ok {
+			(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)] = new(Port)
+		}
+		(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)].IsOpened = pp.IsOpen
+		(*p)[Fqdn(fqdn)][Ip(ip)][string(potuniq)].Sname = sname
+	}
+	
+	if sname == "mra" {
+		for _, port := range []string{"5061", "5222"} {
+			if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
+				(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+			}
+			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = CheckConnection(string(ip), port)
+			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = sname
+
+		}
+	}
+	for _, port := range admin_known_ports {
+		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] ; !ok {
+			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] = new(Port)
+		}
+		(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = CheckConnection(string(ip), port)
+		(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = sname
+	}
+	for _, port := range turn_ports {
+		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
+			(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+		}
+		(*p)[Fqdn(fqdn)][Ip(ip)][port].IsOpened = false
+		(*p)[Fqdn(fqdn)][Ip(ip)][port].Sname = sname
+	}
+}
+
+
+
+func CheckConnection(ip string, port string) bool {
+	timeout := time.Second
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
+	if err != nil {
+		return false	
+	}
+	if conn != nil {
+		defer conn.Close()
+		return true
+	}
+	return false
+}
 
 // func (p *PortsResult) GetCert(ip string, port string) {
 // 	conf := &tls.Config{
