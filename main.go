@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"srvchecker/output"
 	"srvchecker/portconnectivity"
 	"srvchecker/srv"
 	"time"
@@ -33,11 +32,10 @@ func srv_process(c *gin.Context) {
 	domain := c.PostForm("domain")
 	
 	startTime := time.Now()
+	var portsResults portconnectivity.PortsResults
 	srvresults := new(srv.SRVResults)
 	srvresults.ForDomain(domain)
-	portsresults := new(portconnectivity.PortsResults)
-	portsresults.Connectivity(*srvresults)
-	srv, nosrv, connectivity := output.Output(srvresults, portsresults)
+	portsResults.FetchFromSrvResults(srvresults)
 	elapsedTime := time.Since(startTime)
 	log.Println("All process took: ", elapsedTime)
 
@@ -45,9 +43,8 @@ func srv_process(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{ 
 		"code" : http.StatusOK, 
 		"elapsedTime": fmt.Sprint(elapsedTime), 
-		"srv":  srv,
-		"nosrv": nosrv,
-		"connectivity": connectivity, 
+		"srv":  srvresults,
+		"connectivity": portsResults, 
 	})
 	
 	

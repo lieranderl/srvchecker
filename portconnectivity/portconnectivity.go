@@ -6,6 +6,7 @@ import (
 
 	// "log"
 	// "net"
+	"bytes"
 	"net"
 	"srvchecker/srv"
 	"strings"
@@ -43,7 +44,7 @@ type Port struct {
 
 type PortsResults map[Fqdn]map[Ip]map[string]*Port
 
-func (p *PortsResults)fetchFromSrvResults(srvres *srv.SRVResults) {
+func (p *PortsResults)FetchFromSrvResults(srvres *srv.SRVResults) {
 	var wg sync.WaitGroup
 	(*p) = make(map[Fqdn]map[Ip]map[string]*Port)
 	for _, srvresult := range *srvres {
@@ -109,7 +110,7 @@ func (p *PortsResults)fetchFromSrvResults(srvres *srv.SRVResults) {
 // }
 
 func (p *PortsResults)FetchPorts(fqdn srv.Fqdn, ip srv.Ip, port *srv.Port, sname string, wg *sync.WaitGroup){
-	
+	// var someMapMutex = sync.RWMutex{}
 	defer wg.Done()
 	if _, ok := (*p)[Fqdn(fqdn)]; !ok {
 		(*p)[Fqdn(fqdn)] = make(map[Ip]map[string]*Port)
@@ -127,8 +128,8 @@ func (p *PortsResults)FetchPorts(fqdn srv.Fqdn, ip srv.Ip, port *srv.Port, sname
 	
 	if sname == "mra" {
 		for _, port := range []string{"5061", "5222"} {
-			if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
-				(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+			if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] ; !ok {
+				(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"] = new(Port)
 			}
 			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].IsOpened = CheckConnection(string(ip), port)
 			(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = sname
@@ -143,11 +144,11 @@ func (p *PortsResults)FetchPorts(fqdn srv.Fqdn, ip srv.Ip, port *srv.Port, sname
 		(*p)[Fqdn(fqdn)][Ip(ip)][port+":tcp"].Sname = sname
 	}
 	for _, port := range turn_ports {
-		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port] ; !ok {
-			(*p)[Fqdn(fqdn)][Ip(ip)][port] = new(Port)
+		if _, ok := (*p)[Fqdn(fqdn)][Ip(ip)][port+"turn"] ; !ok {
+			(*p)[Fqdn(fqdn)][Ip(ip)][port+"turn"] = new(Port)
 		}
-		(*p)[Fqdn(fqdn)][Ip(ip)][port].IsOpened = false
-		(*p)[Fqdn(fqdn)][Ip(ip)][port].Sname = sname
+		(*p)[Fqdn(fqdn)][Ip(ip)][port+"turn"].IsOpened = RunTurnCheck(string(ip), port)
+		(*p)[Fqdn(fqdn)][Ip(ip)][port+"turn"].Sname = sname
 	}
 }
 
@@ -158,12 +159,10 @@ func CheckConnection(ip string, port string) bool {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
 	if err != nil {
 		return false	
-	}
-	if conn != nil {
+	} else {
 		defer conn.Close()
 		return true
 	}
-	return false
 }
 
 // func (p *PortsResult) GetCert(ip string, port string) {
@@ -189,50 +188,49 @@ func CheckConnection(ip string, port string) bool {
 //     // }
 // }
 
-// func (p *PortsResult) RunTurnCheck(ip string, port string, udp bool, result chan PortsResult) {
-// 	allocation_request := []byte{0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174, 0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110, 111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0}
-//     buf := make([]byte, 16)
+func RunTurnCheck(ip string, port string) bool {
+	allocation_request := []byte{0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174, 0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110, 111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0}
+    buf := make([]byte, 16)
 	
-// 	if udp {
-// 		conn, err := net.DialTimeout("udp", ip+":"+port, 1 * time.Second)
-// 		if err != nil {
-// 			p.Port = map[string]bool{port:false}
-// 			p.Udp = true
-// 		} else {
-// 			conn.Write(allocation_request)
-// 			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-// 			conn.Read(buf)
-// 			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
-// 				p.Port = map[string]bool{port:true}
-// 				p.Udp = true
-// 			} else {
-// 				p.Port = map[string]bool{port:false}
-// 				p.Udp = true
-// 			}
-// 			conn.Close()
-// 		}
-		
-// 		result <- *p
-// 	} else {
-// 		var err error
+	pp := strings.Split(port, ":")
+	port = pp[0]
+	proto := pp[1]
 
-// 		conn, err := net.DialTimeout("tcp", ip+":"+port, 1 * time.Second)
-// 		if err != nil {
-// 			p.Port = map[string]bool{port:false}
-// 		} else {
-// 			defer conn.Close()
-// 			conn.Write(allocation_request)
-// 			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-// 			conn.Read(buf)
-// 			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
-// 				p.Port = map[string]bool{port:true}
-// 			} else {
-// 				p.Port = map[string]bool{port:false}
-// 			}
-// 		}
-// 		result <- *p
-// 	}
-// }
+	if proto == "udp" {
+		conn, err := net.DialTimeout("udp", ip+":"+port, 1 * time.Second)
+		if err != nil {
+			return false
+		} else {
+			defer conn.Close()
+			conn.Write(allocation_request)
+			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			conn.Read(buf)
+			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
+				return true
+			} else {
+				return false
+			}
+			
+		}
+		
+	} else {
+		var err error
+		conn, err := net.DialTimeout("tcp", ip+":"+port, 1 * time.Second)
+		if err != nil {
+			return false
+		} else {
+			defer conn.Close()
+			conn.Write(allocation_request)
+			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			conn.Read(buf)
+			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
+				return true
+			} else {
+				return false
+			}
+		}
+	}
+}
 
 
 // // type PortsResults []PortsResult

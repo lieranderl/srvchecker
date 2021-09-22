@@ -9,10 +9,10 @@ import (
 
 func TestPortconnectivity(t *testing.T) {
 	srvresults := new(srv.SRVResults)
-	srvresults.ForDomain("vodafone.com")
+	srvresults.ForDomain("globits.de")
 
 	var portsResults PortsResults
-	portsResults.fetchFromSrvResults(srvresults)
+	portsResults.FetchFromSrvResults(srvresults)
 
 
 	nosrv, err := json.Marshal(srvresults)
