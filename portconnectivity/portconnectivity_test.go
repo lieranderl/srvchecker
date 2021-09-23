@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"srvchecker/srv"
+
+
+	// "sync"
 	"testing"
 )
 
 func TestPortconnectivity(t *testing.T) {
 	srvresults := new(srv.SRVResults)
-	srvresults.ForDomain("globits.de")
+	srvresults.ForDomain("verizon.com")
 
 	var portsResults PortsResults
 	portsResults.FetchFromSrvResults(srvresults)
@@ -34,5 +37,26 @@ func TestPortconnectivity(t *testing.T) {
 // func TestTurn(t *testing.T) {
 // 	PortsResult := new(PortsResult)
 // 	PortsResult.RunTurnCheck("173.38.154.85", "3478", true)
+// 	t.Fail()
+// }
+
+
+// func TestSyncMap(t *testing.T) {
+// 	// var ss testPizda
+// 	mapsrv := SyncMap()
+
+// 	m := map[string]sync.Map{}
+// 	mapsrv.Range(func(key, value interface{}) bool {
+// 		m[fmt.Sprint(key)] = value.(sync.Map)
+// 		return true
+// 	})
+
+// 	b, err := json.MarshalIndent(mapsrv, "", " ")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Println(string(b))
+
+
 // 	t.Fail()
 // }

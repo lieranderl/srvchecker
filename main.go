@@ -12,15 +12,9 @@ import (
 )
 
 
-
-
 func main(){
-
 	router := gin.Default()
-
-	
 	router.POST("/srv_process", srv_process)
-
 	// By default it serves on :8080 unless a
 	// PORT environment variable was defined.
 	router.Run()
