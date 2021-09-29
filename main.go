@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"srvchecker/portconnectivity"
+	// "srvchecker/portconnectivity"
 	"srvchecker/srv"
 	"time"
 
@@ -50,17 +50,17 @@ func srv_process(c *gin.Context) {
 
 	if c.BindJSON(&json) == nil {
 		startTime := time.Now()
-		var portsResults portconnectivity.PortsResults
-		srvresults := new(srv.SRVResults)
+		// var portsResults portconnectivity.PortsResults
+		srvresults := new(srv.DiscoveredSrvTable)
 		srvresults.ForDomain(json.Domain)
-		portsResults.FetchFromSrvResults(srvresults)
+		// portsResults.FetchFromSrvResults(srvresults)
 		elapsedTime := time.Since(startTime)
 		log.Println("All process took: ", elapsedTime)
 		c.JSON(http.StatusOK, gin.H{ 
 			"code" : http.StatusOK, 
 			"elapsedTime": fmt.Sprint(elapsedTime), 
 			"srv":  srvresults,
-			"connectivity": portsResults, 
+			"connectivity": "", 
 		})
 		
 	} else {

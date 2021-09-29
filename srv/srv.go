@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -32,11 +33,11 @@ type DiscoveredSrvRow struct {
 	Srv 		string
 	Fqdn 		string
 	Ip 			string
-	Port 		string
-	Proto 		string
 	Priority 	string
 	Weight 		string 
-	IsOPened 	bool
+	Port 		string
+	Proto 		string
+	IsOpened 	bool
 	Cert 		string
 	ServiceName string
 }
@@ -155,6 +156,21 @@ func (s *inputSRVlist) Init(domain string) {
 	
 // }
 
+func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
+	timeout := time.Second
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
+	if err != nil {
+		ps.IsOpened = false
+	}
+	if conn != nil {
+		defer conn.Close()
+		ps.IsOpened = true
+		if (port == "8443" || port== "5061") {
+			ps.Cert = GetCert(ip , fmt.Sprint(port))[0].Issuer.CommonName
+		}
+	}
+}
+
 func GetCert(ip string, port string) []*x509.Certificate {
 	conf := &tls.Config{
         InsecureSkipVerify: true,
@@ -170,6 +186,7 @@ func GetCert(ip string, port string) []*x509.Certificate {
 	}
     return nil
 }
+
 
 // func (s *SRVResults) fetchAddr(cname string, fqdn *net.SRV, proto string, newRes *SrvResult, wg *sync.WaitGroup) {
 // 	ips, err := net.LookupHost(fqdn.Target)
@@ -195,6 +212,7 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 	var wg sync.WaitGroup
 
 	for _, srv := range *mysrvs {
+		fmt.Println(srv)
 		proto := "udp"
 		if strings.HasPrefix(srv.proto, "t") {
 			proto = "tcp"
@@ -216,6 +234,9 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 		}
 	}
 	wg.Wait()
+	sort.Slice((*s)[:], func(i, j int) bool {
+		return (*s)[i].Srv < (*s)[j].Srv
+	})
 }
 
 func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, proto string, wg *sync.WaitGroup) {
@@ -230,6 +251,9 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 		for _, ip := range ips {
 			discoveredSrvRow := new(DiscoveredSrvRow)
 			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), ip ,proto)
+			if proto == "tcp" {
+				discoveredSrvRow.Connect_cert(ip, fmt.Sprint(fqdn.Port))
+			}
 			*d = append(*d, discoveredSrvRow)				
 		}
 	}

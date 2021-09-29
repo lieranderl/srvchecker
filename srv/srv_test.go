@@ -10,7 +10,7 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(DiscoveredSrvTable)
-	srvresults.ForDomain("vodafone.com")
+	srvresults.ForDomain("cisco.com")
 
 	fmt.Println(srvresults)
 
