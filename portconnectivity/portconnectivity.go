@@ -14,7 +14,6 @@ import (
 var admin_known_ports = []string{"443", "80", "22"}
 var traversal_ports = []string{"7001", "2222"}
 var turn_ports = []string{"443:tcp", "3478:tcp", "3478:udp"}
-var mutex = &sync.RWMutex{}
 
 
 type Port struct {
@@ -28,7 +27,7 @@ type TcpConnectivityRow struct {
 	ServiceName string
 	Fqdn string
 	Ip string
-	Ports []Port
+	Ports []*Port
 }
 
 
@@ -37,7 +36,7 @@ type TcpConnectivityTable []*TcpConnectivityRow
 
 
 
-func containsPorts(s []Port, port, proto, t string) bool {
+func containsPorts(s []*Port, port, proto, t string) bool {
     for _, a := range s {
         if (a.Num == port && a.Proto == proto && a.Type == t) {
             return true
@@ -69,26 +68,26 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				tcpConnectivityRow.ServiceName = srv.ServiceName
 			
 				if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "admin") {
-					tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "admin", Proto: "tcp"})
+					tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "admin", Proto: "tcp"})
 					
 				}	
 			
 				if srv.ServiceName == "mra" {
 					for _, port := range []string{"5061, 5222"} {
 						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin") {
-							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
+							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
 						}
 					}
 				}		
 				
 				for _, port := range admin_known_ports {
 					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
 					}
 				}
 				for _, port := range traversal_ports {
 					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "traversal") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, Port{Num: port, IsOpened: false, Type: "traversal", Proto: "tcp"})
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "traversal", Proto: "tcp"})
 					}
 				}
 				for _, port := range turn_ports {
@@ -96,7 +95,7 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 					port = pp[0]
 					proto := pp[1]
 					if !containsPorts(tcpConnectivityRow.Ports, port, proto, "turn") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, Port{Num: port, IsOpened: false, Type: "turn", Proto: proto})
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "turn", Proto: proto})
 					}
 				}
 				*t = append(*t, tcpConnectivityRow)

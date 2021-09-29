@@ -24,7 +24,6 @@ func TestPortconnectivity(t *testing.T) {
 	tcpConnectivityTable.FetchFromSrv(*srvresults)
 	tcpConnectivityTable.Connectivity()
 
-	fmt.Println(tcpConnectivityTable)
 
 	for _, row := range tcpConnectivityTable {
 		fmt.Println("=========TCP========")
