@@ -17,8 +17,32 @@ type Fqdn string
 type Ip string
 type Port struct {
 	IsOpened bool
-	Sname string
+	Num string
+	Proto string
 }
+
+type TcpConnectivityRow struct {
+	ServiceName string
+	Fqdn string
+	Ip string
+	AdminPorts []Port
+	TraversalPorts []Port
+}
+
+type TurnConnectivityRow struct {
+	ServiceName string
+	Fqdn string
+	Ip string
+	TcpPorts []Port
+	UdpPorts []Port
+}
+
+
+type TcpConnectivityTable []TcpConnectivityRow
+type TurnConnectivityTable []TurnConnectivityRow
+
+
+
 
 type PortsResults map[Fqdn]map[Ip]map[string]*Port
 
