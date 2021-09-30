@@ -65,17 +65,17 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				tcpConnectivityRow := new(TcpConnectivityRow)
 				tcpConnectivityRow.Fqdn = srv.Fqdn
 				tcpConnectivityRow.Ip = srv.Ip
-				tcpConnectivityRow.ServiceName = srv.ServiceName
-			
-				if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "admin") {
-					tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "admin", Proto: "tcp"})
-					
-				}	
+				
+				if srv.Proto == "tcp" {
+					if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service") {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp"})
+					}	
+				}
 			
 				if srv.ServiceName == "mra" {
 					for _, port := range []string{"5061, 5222"} {
-						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin") {
-							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
+						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "service") {
+							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "service", Proto: "tcp"})
 						}
 					}
 				}		
@@ -99,6 +99,17 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 					}
 				}
 				*t = append(*t, tcpConnectivityRow)
+			} else {
+				if srv.Proto == "tcp" {
+					for _, tcpConnectivityRow := range *t {
+						if (tcpConnectivityRow.Ip == srv.Ip) {
+							if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service") {
+								tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp"})
+							}	
+						}
+					}
+				}
+				
 			}
 		}
 	}
