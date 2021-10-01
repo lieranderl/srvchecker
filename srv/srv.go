@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -162,11 +163,12 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 	if err != nil {
 		ps.IsOpened = false
 	}
-	if conn != nil {
+	if err == nil {
 		defer conn.Close()
 		ps.IsOpened = true
-		if (port == "8443" || port== "5061") {
-			ps.Cert = GetCert(ip , fmt.Sprint(port))[0].Issuer.CommonName
+		cert := GetCert(ip , fmt.Sprint(port))
+		if cert != nil {
+			ps.Cert = cert[len(cert)-1].Issuer.CommonName
 		}
 	}
 }
@@ -175,12 +177,11 @@ func GetCert(ip string, port string) []*x509.Certificate {
 	conf := &tls.Config{
         InsecureSkipVerify: true,
     }
-    conn, err := tls.Dial("tcp", ip+":"+port, conf)
-	conn.SetDeadline(time.Now().Add(2 * time.Second))
-    if err != nil {
-        log.Println("Error in Dial", err)
-    }
-	if conn != nil {
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout:  2 * time.Second}, "tcp", ip+":"+port, conf)
+	if err != nil { 
+		log.Println("Host:", ip,":",port, "Dial:", err)
+	}
+	if err == nil {
 		defer conn.Close()
 		return conn.ConnectionState().PeerCertificates
 	}
@@ -241,7 +242,8 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 
 func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, proto string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	ips, err := net.LookupHost(fqdn.Target)
+	
+	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", fqdn.Target)
 	if err != nil {
 		discoveredSrvRow := new(DiscoveredSrvRow)
 		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), "A record not configured" ,proto)
@@ -250,9 +252,9 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 	if len(ips)>0 {
 		for _, ip := range ips {
 			discoveredSrvRow := new(DiscoveredSrvRow)
-			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), ip ,proto)
+			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), ip.To4().String() ,proto)
 			if proto == "tcp" {
-				discoveredSrvRow.Connect_cert(ip, fmt.Sprint(fqdn.Port))
+				discoveredSrvRow.Connect_cert(ip.To4().String(), fmt.Sprint(fqdn.Port))
 			}
 			*d = append(*d, discoveredSrvRow)				
 		}

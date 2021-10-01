@@ -73,7 +73,7 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				}
 			
 				if srv.ServiceName == "mra" {
-					for _, port := range []string{"5061, 5222"} {
+					for _, port := range []string{"5061", "5222"} {
 						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "service") {
 							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "service", Proto: "tcp"})
 						}
