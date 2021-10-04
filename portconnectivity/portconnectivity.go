@@ -141,56 +141,6 @@ func (p *Port)connection(ip string, wg *sync.WaitGroup) {
 	}
 }
 
-// func (p *PortsResults)FetchPorts(fqdn srv.Fqdn, ip srv.Ip, port *srv.Port, sname string, wg *sync.WaitGroup){
-// 	defer wg.Done()
-// 	current_fqdn := (*p)[Fqdn(fqdn)]
-// 	currrent_ip := current_fqdn[Ip(ip)]
-
-// 	if _, ok := (*p)[Fqdn(fqdn)]; !ok {
-// 		current_fqdn = make(map[Ip]map[string]*Port)
-// 	}
-// 	if _, ok := current_fqdn[Ip(ip)] ; !ok {
-// 		currrent_ip = make(map[string]*Port)
-// 	}
-// 	for potuniq, pp := range *port {
-// 		if _, ok := currrent_ip[string(potuniq)] ; !ok {
-// 			currrent_ip[string(potuniq)] = new(Port)
-// 		}
-// 		currrent_ip[string(potuniq)].IsOpened = pp.IsOpen
-// 		currrent_ip[string(potuniq)].Sname = sname
-// 	}
-
-// 	if sname == "mra" {
-// 		for _, port := range []string{"5061", "5222"} {
-// 			if _, ok := currrent_ip[port+":tcp"] ; !ok {
-// 				currrent_ip[port+":tcp"] = new(Port)
-// 			}
-// 			currrent_ip[port+":tcp"].IsOpened = CheckConnection(string(ip), port)
-// 			currrent_ip[port+":tcp"].Sname = sname
-
-// 		}
-// 	}
-// 	for _, port := range admin_known_ports {
-// 		if _, ok := currrent_ip[port+":tcp"] ; !ok {
-// 			currrent_ip[port+":tcp"] = new(Port)
-// 		}
-// 		currrent_ip[port+":tcp"].IsOpened = CheckConnection(string(ip), port)
-// 		currrent_ip[port+":tcp"].Sname = sname
-// 	}
-// 	for _, port := range turn_ports {
-// 		if _, ok := currrent_ip[port+"turn"] ; !ok {
-// 			currrent_ip[port+"turn"] = new(Port)
-// 		}
-// 		currrent_ip[port+"turn"].IsOpened = RunTurnCheck(string(ip), port)
-// 		currrent_ip[port+"turn"].Sname = sname
-// 	}
-
-// 	mutex.Lock()
-// 	current_fqdn[Ip(ip)] = currrent_ip
-// 	(*p)[Fqdn(fqdn)]= current_fqdn
-// 	mutex.Unlock()
-
-// }
 
 func CheckConnection(ip string, port string) bool {
 	timeout := time.Second
@@ -208,15 +158,15 @@ func RunTurnCheck(ip string, port string, proto string) bool {
     buf := make([]byte, 16)
 	
 	if proto == "udp" {
-		conn, err := net.DialTimeout("udp", ip+":"+port, 1 * time.Second)
+		conn, err := net.DialTimeout("udp", ip+":"+port, 2 * time.Second)
 		if err != nil {
 			return false
 		} else {
 			defer conn.Close()
 			conn.Write(allocation_request)
-			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			conn.Read(buf)
-			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
+			if bytes.HasPrefix(buf, []byte{1, 19, 0}) {
 				return true
 			} else {
 				return false
@@ -226,7 +176,7 @@ func RunTurnCheck(ip string, port string, proto string) bool {
 		
 	} else {
 		var err error
-		conn, err := net.DialTimeout("tcp", ip+":"+port, 1 * time.Second)
+		conn, err := net.DialTimeout("tcp", ip+":"+port, 2 * time.Second)
 		if err != nil {
 			return false
 		} else {
@@ -234,7 +184,7 @@ func RunTurnCheck(ip string, port string, proto string) bool {
 			conn.Write(allocation_request)
 			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			conn.Read(buf)
-			if bytes.HasPrefix(buf, []byte{1, 19, 0,160}) {
+			if bytes.HasPrefix(buf, []byte{1, 19, 0}) {
 				return true
 			} else {
 				return false

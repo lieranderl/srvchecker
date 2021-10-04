@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	// "srvchecker/portconnectivity"
 	"srvchecker/portconnectivity"
 	"srvchecker/srv"
 	"time"
