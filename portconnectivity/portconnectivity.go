@@ -2,9 +2,11 @@ package portconnectivity
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"sort"
 	"srvchecker/srv"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,7 +20,7 @@ var turn_ports = []string{"443:tcp", "3478:tcp", "3478:udp"}
 
 type Port struct {
 	IsOpened bool
-	Num string
+	Num uint16
 	Proto string
 	Type string
 	ServiceName string
@@ -36,7 +38,7 @@ type TcpConnectivityTable []*TcpConnectivityRow
 
 
 
-func containsPorts(ports []*Port, port, proto, t, serv string) bool {
+func containsPorts(ports []*Port, port uint16, proto, t, serv string) bool {
     for _, p := range ports {
         if (p.Num == port && p.Proto == proto && p.Type == t && p.ServiceName == serv) {
             return true
@@ -59,6 +61,8 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 	
 	// var wg sync.WaitGroup
 	//Service port check
+	var base = 10
+	var size = 16
 	for _, srv := range srvres {
 		if strings.Contains(srv.Ip, ".") {
 			if !containsTcpConnectivity(*t, srv.Ip) {
@@ -74,28 +78,32 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 			
 				if srv.ServiceName == "mra" {
 					for _, port := range []string{"5061", "5222"} {
-						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "service", srv.ServiceName) {
-							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
+						port, _ := strconv.ParseUint(port, base, size)
+						if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "service", srv.ServiceName) {
+							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
 						}
 					}
 				}		
 				
 				for _, port := range admin_known_ports {
-					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp", ServiceName: srv.ServiceName})
+					port, _ := strconv.ParseUint(port, base, size)
+					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "admin", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "admin", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
 				for _, port := range traversal_ports {
-					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "traversal", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "traversal", Proto: "tcp", ServiceName: srv.ServiceName})
+					port, _ := strconv.ParseUint(port, base, size)
+					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "traversal", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "traversal", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
 				for _, port := range turn_ports {
 					pp := strings.Split(port, ":")
 					port = pp[0]
 					proto := pp[1]
-					if !containsPorts(tcpConnectivityRow.Ports, port, proto, "turn", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "turn", Proto: proto, ServiceName: srv.ServiceName})
+					port, _ := strconv.ParseUint(port, base, size)
+					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), proto, "turn", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "turn", Proto: proto, ServiceName: srv.ServiceName})
 					}
 				}
 				*t = append(*t, tcpConnectivityRow)
@@ -135,9 +143,9 @@ func (t *TcpConnectivityTable)Connectivity()  {
 func (p *Port)connection(ip string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if p.Type == "turn" {
-		p.IsOpened = RunTurnCheck(ip, p.Num, p.Proto)
+		p.IsOpened = RunTurnCheck(ip, fmt.Sprint(p.Num), p.Proto)
 	} else {
-		p.IsOpened = CheckConnection(ip, p.Num)
+		p.IsOpened = CheckConnection(ip, fmt.Sprint(p.Num))
 	}
 }
 

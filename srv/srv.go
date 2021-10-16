@@ -2,7 +2,6 @@ package srv
 
 import (
 	"context"
-	"log"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -39,7 +38,7 @@ type DiscoveredSrvRow struct {
 	Ip 			string
 	Priority 	string
 	Weight 		string 
-	Port 		string
+	Port 		uint16
 	Proto 		string
 	IsOpened 	bool
 	Cert 		string
@@ -93,9 +92,6 @@ func GetCert(ip string, port string) []*x509.Certificate {
 
 	conf := tls.Config{InsecureSkipVerify: true}
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout:  2 * time.Second}, "tcp", ip+":"+port, &conf)
-	if err != nil { 
-		log.Println("Host:", ip,":",port, "Dial:", err)
-	}
 	if err == nil {
 		defer conn.Close()
 		return conn.ConnectionState().PeerCertificates
@@ -110,7 +106,6 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 	var wg sync.WaitGroup
 
 	for _, srv := range *mysrvs {
-		fmt.Println(srv)
 		proto := "udp"
 		if strings.HasPrefix(srv.proto, "t") {
 			proto = "tcp"
@@ -143,13 +138,13 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", fqdn.Target)
 	if err != nil {
 		discoveredSrvRow := new(DiscoveredSrvRow)
-		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), "A record not configured" ,proto)
+		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured" ,proto)
 		*d = append(*d, discoveredSrvRow)				
 	} 
 	if len(ips)>0 {
 		for _, ip := range ips {
 			discoveredSrvRow := new(DiscoveredSrvRow)
-			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), ip.To4().String() ,proto)
+			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, ip.To4().String() ,proto)
 			if proto == "tcp" {
 				discoveredSrvRow.Connect_cert(ip.To4().String(), fmt.Sprint(fqdn.Port))
 			}
@@ -158,7 +153,7 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 	}
 }
 
-func (d *DiscoveredSrvRow) Init(cname, servName, priority, weight, fqdn, port, ip, proto string) {
+func (d *DiscoveredSrvRow) Init(cname, servName, priority, weight, fqdn string, port uint16, ip, proto string) {
 	d.Srv = cname
 	d.ServiceName = servName
 	d.Priority = priority
