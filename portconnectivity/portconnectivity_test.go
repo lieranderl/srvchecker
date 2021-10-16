@@ -1,7 +1,7 @@
 package portconnectivity
 
 import (
-	"encoding/json"
+
 	"fmt"
 	"srvchecker/srv"
 
@@ -11,24 +11,29 @@ import (
 )
 
 func TestPortconnectivity(t *testing.T) {
-	srvresults := new(srv.SRVResults)
-	srvresults.ForDomain("verizon.com")
-
-	var portsResults PortsResults
-	portsResults.FetchFromSrvResults(srvresults)
-
-
-	nosrv, err := json.Marshal(srvresults)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
+	
+	srvresults := new(srv.DiscoveredSrvTable)
+	srvresults.ForDomain("cisco.com")
+	
+	for _, res := range *srvresults {
+		fmt.Println("=================")
+		fmt.Println(res)
 	}
-	fmt.Println(string(nosrv))
+	
+	tcpConnectivityTable := make(TcpConnectivityTable, 0)
+	tcpConnectivityTable.FetchFromSrv(*srvresults)
+	tcpConnectivityTable.Connectivity()
 
-	nosrv, err = json.Marshal(portsResults)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
+
+	for _, row := range tcpConnectivityTable {
+		fmt.Println("=========TCP========")
+		fmt.Println(row.Fqdn)
+		fmt.Println(row.Ip)
+		for _, port := range row.Ports {
+			fmt.Print(port)
+		}
 	}
-	fmt.Println(string(nosrv))
+	
 	
 	t.Fail()
 
