@@ -21,10 +21,10 @@ type Port struct {
 	Num string
 	Proto string
 	Type string
+	ServiceName string
 }
 
 type TcpConnectivityRow struct {
-	ServiceName string
 	Fqdn string
 	Ip string
 	Ports []*Port
@@ -36,9 +36,9 @@ type TcpConnectivityTable []*TcpConnectivityRow
 
 
 
-func containsPorts(s []*Port, port, proto, t string) bool {
-    for _, a := range s {
-        if (a.Num == port && a.Proto == proto && a.Type == t) {
+func containsPorts(ports []*Port, port, proto, t, serv string) bool {
+    for _, p := range ports {
+        if (p.Num == port && p.Proto == proto && p.Type == t && p.ServiceName == serv) {
             return true
         }
     }
@@ -65,38 +65,37 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				tcpConnectivityRow := new(TcpConnectivityRow)
 				tcpConnectivityRow.Fqdn = srv.Fqdn
 				tcpConnectivityRow.Ip = srv.Ip
-				tcpConnectivityRow.ServiceName = srv.ServiceName
 				
 				if srv.Proto == "tcp" {
-					if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp"})
+					if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
 					}	
 				}
 			
 				if srv.ServiceName == "mra" {
 					for _, port := range []string{"5061", "5222"} {
-						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "service") {
-							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "service", Proto: "tcp"})
+						if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "service", srv.ServiceName) {
+							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
 						}
 					}
 				}		
 				
 				for _, port := range admin_known_ports {
-					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp"})
+					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "admin", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "admin", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
 				for _, port := range traversal_ports {
-					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "traversal") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "traversal", Proto: "tcp"})
+					if !containsPorts(tcpConnectivityRow.Ports, port, "tcp", "traversal", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "traversal", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
 				for _, port := range turn_ports {
 					pp := strings.Split(port, ":")
 					port = pp[0]
 					proto := pp[1]
-					if !containsPorts(tcpConnectivityRow.Ports, port, proto, "turn") {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "turn", Proto: proto})
+					if !containsPorts(tcpConnectivityRow.Ports, port, proto, "turn", srv.ServiceName) {
+						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: "turn", Proto: proto, ServiceName: srv.ServiceName})
 					}
 				}
 				*t = append(*t, tcpConnectivityRow)
@@ -104,8 +103,8 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				if srv.Proto == "tcp" {
 					for _, tcpConnectivityRow := range *t {
 						if (tcpConnectivityRow.Ip == srv.Ip) {
-							if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service") {
-								tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp"})
+							if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service", srv.ServiceName) {
+								tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
 							}	
 						}
 					}

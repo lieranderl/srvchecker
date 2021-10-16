@@ -13,7 +13,7 @@ import (
 func TestPortconnectivity(t *testing.T) {
 	
 	srvresults := new(srv.DiscoveredSrvTable)
-	srvresults.ForDomain("cisco.com")
+	srvresults.ForDomain("mofa.gov.sa")
 	
 	for _, res := range *srvresults {
 		fmt.Println("=================")
@@ -29,7 +29,6 @@ func TestPortconnectivity(t *testing.T) {
 		fmt.Println("=========TCP========")
 		fmt.Println(row.Fqdn)
 		fmt.Println(row.Ip)
-		fmt.Println(row.ServiceName)
 		for _, port := range row.Ports {
 			fmt.Print(port)
 		}
