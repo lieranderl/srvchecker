@@ -10,13 +10,17 @@ import (
 func TestSrv(t *testing.T) {
 
 	srvresults := new(DiscoveredSrvTable)
-	srvresults.ForDomain("strayer.edu")
+	srvresults.ForDomain("mofa.gov.sa")
 
 	fmt.Println(srvresults)
 
 	for _, res := range *srvresults {
 		fmt.Println("=================")
-		fmt.Println(res)
+		for _, cert := range res.Certs {
+			fmt.Println("=========CERT========")
+			fmt.Println(cert)
+			fmt.Println("=========END========")
+		}
 	}
 	t.Fail()
 

@@ -2,13 +2,14 @@ package srv
 
 import (
 	"context"
-
+	
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/grantae/certinfo"
 	"fmt"
 
 	"net"
-	
+
 	"sort"
 	"strings"
 	"sync"
@@ -42,7 +43,20 @@ type DiscoveredSrvRow struct {
 	Proto 		string
 	IsOpened 	bool
 	Cert 		string
+	Certs 		[]*Cert
 	ServiceName string
+}
+
+type Cert struct {
+	Txt string
+	Cn string
+	Subject string
+	San string
+	KeyUsage []string
+	ExtKeyUsage []string
+	Issuer string
+	NotBefore string
+	NotAfter string
 }
 
 type DiscoveredSrvTable []*DiscoveredSrvRow
@@ -81,9 +95,31 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 	if err == nil {
 		defer conn.Close()
 		ps.IsOpened = true
-		cert := GetCert(ip , fmt.Sprint(port))
-		if cert != nil {
-			ps.Cert = cert[len(cert)-1].Issuer.CommonName
+		certs := GetCert(ip , fmt.Sprint(port))
+		if certs != nil {
+			ps.Cert = certs[0].Subject.CommonName
+		}
+
+		for _, cert :=range certs {
+			c := new(Cert)
+			c.Cn = cert.Subject.CommonName
+			c.Issuer = cert.Issuer.CommonName
+			c.Subject = cert.Subject.String()
+			c.San = strings.Join(cert.DNSNames, ",") 
+			c.NotBefore = cert.NotBefore.String()
+			c.NotAfter = cert.NotAfter.String()
+
+			for _, eku := range cert.ExtKeyUsage {
+				if eku == x509.ExtKeyUsageServerAuth {
+					c.ExtKeyUsage = append(c.ExtKeyUsage, "TLS Web Server Authentication")
+				}
+				if eku == x509.ExtKeyUsageClientAuth {
+					c.ExtKeyUsage = append(c.ExtKeyUsage, "TLS Web Client Authentication")
+				}
+			}
+			
+			c.Txt, _ = certinfo.CertificateText(cert)
+			ps.Certs = append(ps.Certs, c)
 		}
 	}
 }
