@@ -65,6 +65,7 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 				tcpConnectivityRow := new(TcpConnectivityRow)
 				tcpConnectivityRow.Fqdn = srv.Fqdn
 				tcpConnectivityRow.Ip = srv.Ip
+				tcpConnectivityRow.ServiceName = srv.ServiceName
 				
 				if srv.Proto == "tcp" {
 					if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service") {
