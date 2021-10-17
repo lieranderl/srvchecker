@@ -12,15 +12,24 @@ func TestSrv(t *testing.T) {
 	srvresults := new(DiscoveredSrvTable)
 	srvresults.ForDomain("mofa.gov.sa")
 
-	fmt.Println(srvresults)
 
 	for _, res := range *srvresults {
-		fmt.Println("=================")
-		for _, cert := range res.Certs {
-			fmt.Println("=========CERT========")
-			fmt.Println(cert)
-			fmt.Println("=========END========")
+		
+		if res.Certs != nil {
+			fmt.Println("=================")
+			fmt.Println(res.Certs)
+			if res.Certs[0].Child != nil {
+				fmt.Println("=================")
+				fmt.Println(res.Certs[0].Child[0])
+				if res.Certs[0].Child[0].Child != nil {
+					fmt.Println("=================")
+					fmt.Println(res.Certs[0].Child[0].Child[0])
+				}
+			}
+			
 		}
+		
+		
 	}
 	t.Fail()
 

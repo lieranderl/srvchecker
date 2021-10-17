@@ -4,7 +4,6 @@ import (
 	"srvchecker/webserver"
 )
 
-
 func main(){
 	webserver.Run()
 }

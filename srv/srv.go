@@ -57,6 +57,7 @@ type Cert struct {
 	Issuer string
 	NotBefore string
 	NotAfter string
+	Child []*Cert
 }
 
 type DiscoveredSrvTable []*DiscoveredSrvRow
@@ -99,13 +100,12 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 		if certs != nil {
 			ps.Cert = certs[0].Subject.CommonName
 		}
-
-		for _, cert :=range certs {
+		for i, cert :=range certs {
 			c := new(Cert)
 			c.Cn = cert.Subject.CommonName
 			c.Issuer = cert.Issuer.CommonName
 			c.Subject = cert.Subject.String()
-			c.San = strings.Join(cert.DNSNames, ",") 
+			c.San = strings.Join(cert.DNSNames, ", ") 
 			c.NotBefore = cert.NotBefore.String()
 			c.NotAfter = cert.NotAfter.String()
 
@@ -119,8 +119,31 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 			}
 			
 			c.Txt, _ = certinfo.CertificateText(cert)
-			ps.Certs = append(ps.Certs, c)
+			
+			if i == 0 {
+				ps.Certs = append(ps.Certs, c)
+			}
+			if i == 1 {
+	
+				ps.Certs[0].Child = append(ps.Certs[0].Child, c)
+			}
+			if i == 2 {
+
+				ps.Certs[0].Child[0].Child = append(ps.Certs[0].Child[0].Child, c)
+			}
+			if i == 3 {
+		
+				ps.Certs[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child, c)
+			}
+			if i == 4 {
+				ps.Certs[0].Child[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child[0].Child, c)
+			}
+			// if i == 5 {
+			// 	ps.Certs.Child.Child.Child.Child.Child = c
+			// }
+			
 		}
+
 	}
 }
 
@@ -130,7 +153,13 @@ func GetCert(ip string, port string) []*x509.Certificate {
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout:  2 * time.Second}, "tcp", ip+":"+port, &conf)
 	if err == nil {
 		defer conn.Close()
-		return conn.ConnectionState().PeerCertificates
+		certs := conn.ConnectionState().PeerCertificates
+		reversed := make([]*x509.Certificate,0)
+		for i := range certs {
+				n := certs[len(certs)-1-i]
+				reversed = append(reversed, n)
+		}
+		return reversed
 	}
     return nil
 }
