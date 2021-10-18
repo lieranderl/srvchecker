@@ -75,14 +75,3 @@ func Srvprocess(w http.ResponseWriter, r *http.Request) {
 	})
 	
 }
-
-// func cut_time(elapsedTime time.Duration) string{
-// 	s := elapsedTime.String()
-// 	sslice:=strings.Split(s, ".") 
-// 		s = s[:len(s)-6]
-// 	if len(sslice) > 1 {
-// 		sslice[1] = sslice[1][:(len(sslice[1])-(len(sslice[1])-2))]
-// 		s = strings.Join(sslice, ".")
-// 	}
-// 	return s
-// }
