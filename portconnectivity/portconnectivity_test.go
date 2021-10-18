@@ -1,13 +1,12 @@
 package portconnectivity
 
 import (
-
 	"fmt"
-	"srvchecker/srv"
-
 
 	// "sync"
 	"testing"
+
+	"example.com/srvprocess/srv"
 )
 
 func TestPortconnectivity(t *testing.T) {

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net"
 	"sort"
-	"srvchecker/srv"
+
 	"strconv"
 	"strings"
 	"time"
 
 	"sync"
+
+	"example.com/srvprocess/srv"
 )
 
 var admin_known_ports = []string{"443", "80", "22"}
