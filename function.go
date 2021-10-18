@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-
-	"strings"
 	"time"
 
 	"example.com/srvprocess/portconnectivity"
@@ -64,29 +62,27 @@ func Srvprocess(w http.ResponseWriter, r *http.Request) {
 	tcpConnectivityTable.FetchFromSrv(*srvresults)
 	tcpConnectivityTable.Connectivity()
 
-	elapsedTime := time.Since(startTime)
-	stime := cut_time(elapsedTime)
-
-	log.Println("All process took: ", stime)
+	elapsedTime := time.Since(startTime).Round(time.Millisecond).String()
+	log.Println("All process took: ", elapsedTime)
 
 	type H map[string]interface{}
 
 	json.NewEncoder(w).Encode(H{ 
 		"code" : http.StatusOK, 
-		"elapsedTime": stime,
+		"elapsedTime": elapsedTime,
 		"srv":  srvresults,
 		"connectivity": tcpConnectivityTable, 
 	})
 	
 }
 
-func cut_time(elapsedTime time.Duration) string{
-	s := elapsedTime.String()
-	sslice:=strings.Split(s, ".") 
-		s = s[:len(s)-6]
-	if len(sslice) > 1 {
-		sslice[1] = sslice[1][:(len(sslice[1])-(len(sslice[1])-2))]
-		s = strings.Join(sslice, ".")
-	}
-	return s
-}
+// func cut_time(elapsedTime time.Duration) string{
+// 	s := elapsedTime.String()
+// 	sslice:=strings.Split(s, ".") 
+// 		s = s[:len(s)-6]
+// 	if len(sslice) > 1 {
+// 		sslice[1] = sslice[1][:(len(sslice[1])-(len(sslice[1])-2))]
+// 		s = strings.Join(sslice, ".")
+// 	}
+// 	return s
+// }
