@@ -2,14 +2,14 @@ package srv
 
 import (
 	"context"
-	"log"
-
+	
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/grantae/certinfo"
 	"fmt"
 
 	"net"
-	
+
 	"sort"
 	"strings"
 	"sync"
@@ -39,11 +39,25 @@ type DiscoveredSrvRow struct {
 	Ip 			string
 	Priority 	string
 	Weight 		string 
-	Port 		string
+	Port 		uint16
 	Proto 		string
 	IsOpened 	bool
 	Cert 		string
+	Certs 		[]*Cert
 	ServiceName string
+}
+
+type Cert struct {
+	Txt string
+	Cn string
+	Subject string
+	San string
+	KeyUsage []string
+	ExtKeyUsage []string
+	Issuer string
+	NotBefore string
+	NotAfter string
+	Child []*Cert
 }
 
 type DiscoveredSrvTable []*DiscoveredSrvRow
@@ -82,10 +96,54 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 	if err == nil {
 		defer conn.Close()
 		ps.IsOpened = true
-		cert := GetCert(ip , fmt.Sprint(port))
-		if cert != nil {
-			ps.Cert = cert[len(cert)-1].Issuer.CommonName
+		certs := GetCert(ip , fmt.Sprint(port))
+		if certs != nil {
+			ps.Cert = certs[0].Subject.CommonName
 		}
+		for i, cert :=range certs {
+			c := new(Cert)
+			c.Cn = cert.Subject.CommonName
+			c.Issuer = cert.Issuer.CommonName
+			c.Subject = cert.Subject.String()
+			c.San = strings.Join(cert.DNSNames, ", ") 
+			c.NotBefore = cert.NotBefore.String()
+			c.NotAfter = cert.NotAfter.String()
+
+			for _, eku := range cert.ExtKeyUsage {
+				if eku == x509.ExtKeyUsageServerAuth {
+					c.ExtKeyUsage = append(c.ExtKeyUsage, "TLS Web Server Authentication")
+				}
+				if eku == x509.ExtKeyUsageClientAuth {
+					c.ExtKeyUsage = append(c.ExtKeyUsage, "TLS Web Client Authentication")
+				}
+			}
+			
+			c.Txt, _ = certinfo.CertificateText(cert)
+			
+			if i == 0 {
+				ps.Certs = append(ps.Certs, c)
+			}
+			if i == 1 {
+	
+				ps.Certs[0].Child = append(ps.Certs[0].Child, c)
+			}
+			if i == 2 {
+
+				ps.Certs[0].Child[0].Child = append(ps.Certs[0].Child[0].Child, c)
+			}
+			if i == 3 {
+		
+				ps.Certs[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child, c)
+			}
+			if i == 4 {
+				ps.Certs[0].Child[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child[0].Child, c)
+			}
+			// if i == 5 {
+			// 	ps.Certs.Child.Child.Child.Child.Child = c
+			// }
+			
+		}
+
 	}
 }
 
@@ -93,12 +151,15 @@ func GetCert(ip string, port string) []*x509.Certificate {
 
 	conf := tls.Config{InsecureSkipVerify: true}
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout:  2 * time.Second}, "tcp", ip+":"+port, &conf)
-	if err != nil { 
-		log.Println("Host:", ip,":",port, "Dial:", err)
-	}
 	if err == nil {
 		defer conn.Close()
-		return conn.ConnectionState().PeerCertificates
+		certs := conn.ConnectionState().PeerCertificates
+		reversed := make([]*x509.Certificate,0)
+		for i := range certs {
+				n := certs[len(certs)-1-i]
+				reversed = append(reversed, n)
+		}
+		return reversed
 	}
     return nil
 }
@@ -110,7 +171,6 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 	var wg sync.WaitGroup
 
 	for _, srv := range *mysrvs {
-		fmt.Println(srv)
 		proto := "udp"
 		if strings.HasPrefix(srv.proto, "t") {
 			proto = "tcp"
@@ -143,13 +203,13 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", fqdn.Target)
 	if err != nil {
 		discoveredSrvRow := new(DiscoveredSrvRow)
-		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), "A record not configured" ,proto)
+		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured" ,proto)
 		*d = append(*d, discoveredSrvRow)				
 	} 
 	if len(ips)>0 {
 		for _, ip := range ips {
 			discoveredSrvRow := new(DiscoveredSrvRow)
-			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fmt.Sprint(fqdn.Port), ip.To4().String() ,proto)
+			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, ip.To4().String() ,proto)
 			if proto == "tcp" {
 				discoveredSrvRow.Connect_cert(ip.To4().String(), fmt.Sprint(fqdn.Port))
 			}
@@ -158,7 +218,7 @@ func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, pro
 	}
 }
 
-func (d *DiscoveredSrvRow) Init(cname, servName, priority, weight, fqdn, port, ip, proto string) {
+func (d *DiscoveredSrvRow) Init(cname, servName, priority, weight, fqdn string, port uint16, ip, proto string) {
 	d.Srv = cname
 	d.ServiceName = servName
 	d.Priority = priority
