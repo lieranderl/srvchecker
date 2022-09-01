@@ -1,19 +1,18 @@
 package portconnectivity
 
 import (
-
 	"fmt"
-	"srvchecker/srv"
-
 
 	// "sync"
 	"testing"
+
+	"example.com/srvprocess/srv"
 )
 
 func TestPortconnectivity(t *testing.T) {
 	
 	srvresults := new(srv.DiscoveredSrvTable)
-	srvresults.ForDomain("cisco.com")
+	srvresults.ForDomain("mofa.gov.sa")
 	
 	for _, res := range *srvresults {
 		fmt.Println("=================")
