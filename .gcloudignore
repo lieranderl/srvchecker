@@ -1,7 +1,5 @@
-# ingore all
-*
-# Except
-!/portconnectivity/**
-!/srv/**
-!/function.go
-!/go.mod
+cmd/**
+.git/**
+.gcloudignore
+.gitignore
+gcloud-deploy.sh
