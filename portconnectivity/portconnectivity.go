@@ -55,8 +55,9 @@ func containsTcpConnectivity(s TcpConnectivityTable, ip string) bool {
 	return false
 }
 
-func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) {
 
+func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
+	
 	// var wg sync.WaitGroup
 	//Service port check
 	var base = 10
@@ -89,12 +90,14 @@ func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) {
 						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "admin", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
+
 				for _, port := range traversal_ports {
 					port, _ := strconv.ParseUint(port, base, size)
 					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "traversal", srv.ServiceName) {
 						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "traversal", Proto: "tcp", ServiceName: srv.ServiceName})
 					}
 				}
+
 				for _, port := range turn_ports {
 					pp := strings.Split(port, ":")
 					port = pp[0]
@@ -122,6 +125,7 @@ func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) {
 	sort.Slice((*t)[:], func(i, j int) bool {
 		return (*t)[i].Fqdn < (*t)[j].Fqdn
 	})
+
 
 	// wg.Wait()
 }
