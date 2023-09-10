@@ -12,7 +12,7 @@ import (
 func TestPortconnectivity(t *testing.T) {
 	
 	srvresults := new(srv.DiscoveredSrvTable)
-	srvresults.ForDomain("akbank.com")
+	srvresults.ForDomain("cisco.com")
 	
 	for _, res := range *srvresults {
 		fmt.Println("=================")
@@ -20,8 +20,7 @@ func TestPortconnectivity(t *testing.T) {
 	}
 	
 	tcpConnectivityTable := make(TcpConnectivityTable, 0)
-	tcpConnectivityTable.FetchFromSrv(*srvresults)
-	tcpConnectivityTable.Connectivity()
+	tcpConnectivityTable.FetchFromSrv(*srvresults).Connectivity()
 
 
 	for _, row := range tcpConnectivityTable {

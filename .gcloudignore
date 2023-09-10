@@ -1,0 +1,5 @@
+cmd/**
+.git/**
+.gcloudignore
+.gitignore
+gcloud-deploy.sh
