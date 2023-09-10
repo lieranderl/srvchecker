@@ -55,9 +55,8 @@ func containsTcpConnectivity(s TcpConnectivityTable, ip string) bool {
 	return false
 }
 
+func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpConnectivityTable {
 
-func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
-	
 	// var wg sync.WaitGroup
 	//Service port check
 	var base = 10
@@ -126,6 +125,7 @@ func (t *TcpConnectivityTable)FetchFromSrv(srvres srv.DiscoveredSrvTable)  {
 		return (*t)[i].Fqdn < (*t)[j].Fqdn
 	})
 
+	return t
 
 	// wg.Wait()
 }
