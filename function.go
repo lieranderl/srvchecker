@@ -8,32 +8,27 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/srvprocess/portconnectivity"
-	"example.com/srvprocess/srv"
+	"github.com/lieranderl/srvchecker/portconnectivity"
+	"github.com/lieranderl/srvchecker/srv"
 )
 
-
 func Srvprocess(w http.ResponseWriter, r *http.Request) {
-	
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-
-
 	type inputRequest struct {
-		Domain     string `form:"domain" json:"domain" binding:"required"`
-		DnsServer  string `form:"dnsServer" json:"dnsServer"`
+		Domain    string `form:"domain" json:"domain" binding:"required"`
+		DnsServer string `form:"dnsServer" json:"dnsServer"`
 	}
-	
-	var json_input inputRequest
 
+	var json_input inputRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&json_input); err != nil {
 		switch err {
@@ -54,7 +49,6 @@ func Srvprocess(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Processing...")
 
-
 	startTime := time.Now()
 	srvresults := new(srv.DiscoveredSrvTable)
 	srvresults.ForDomain(json_input.Domain)
@@ -67,11 +61,11 @@ func Srvprocess(w http.ResponseWriter, r *http.Request) {
 
 	type H map[string]interface{}
 
-	json.NewEncoder(w).Encode(H{ 
-		"code" : http.StatusOK, 
-		"elapsedTime": elapsedTime,
-		"srv":  srvresults,
-		"connectivity": tcpConnectivityTable, 
+	json.NewEncoder(w).Encode(H{
+		"code":         http.StatusOK,
+		"elapsedTime":  elapsedTime,
+		"srv":          srvresults,
+		"connectivity": tcpConnectivityTable,
 	})
-	
+
 }

@@ -6,13 +6,13 @@ import (
 	// "sync"
 	"testing"
 
-	"example.com/srvprocess/srv"
+	"github.com/lieranderl/srvchecker/srv"
 )
 
 func TestPortconnectivity(t *testing.T) {
 	
 	srvresults := new(srv.DiscoveredSrvTable)
-	srvresults.ForDomain("mofa.gov.sa")
+	srvresults.ForDomain("akbank.com")
 	
 	for _, res := range *srvresults {
 		fmt.Println("=================")
@@ -33,8 +33,6 @@ func TestPortconnectivity(t *testing.T) {
 		}
 	}
 	
-	
-	t.Fail()
 
 }
 
