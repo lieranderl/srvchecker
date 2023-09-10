@@ -48,13 +48,13 @@ func Srvprocess(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Processing...")
-
 	startTime := time.Now()
+
 	srvresults := new(srv.DiscoveredSrvTable)
 	srvresults.ForDomain(json_input.Domain)
+
 	tcpConnectivityTable := make(portconnectivity.TcpConnectivityTable, 0)
-	tcpConnectivityTable.FetchFromSrv(*srvresults)
-	tcpConnectivityTable.Connectivity()
+	tcpConnectivityTable.FetchFromSrv(*srvresults).Connectivity()
 
 	elapsedTime := time.Since(startTime).Round(time.Millisecond).String()
 	log.Println("All process took: ", elapsedTime)

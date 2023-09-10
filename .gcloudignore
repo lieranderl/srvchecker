@@ -1,0 +1,4 @@
+.env
+gcloud-deploy.sh
+/cmd
+.gcloudignore
