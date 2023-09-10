@@ -1,4 +1,7 @@
-.env
-gcloud-deploy.sh
-/cmd
-.gcloudignore
+# ingore all
+*
+# Except
+!/portconnectivity/**
+!/srv/**
+!function.go
+!go.mod
