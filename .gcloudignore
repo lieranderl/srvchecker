@@ -3,5 +3,5 @@
 # Except
 !/portconnectivity/**
 !/srv/**
-!function.go
-!go.mod
+!/function.go
+!/go.mod
