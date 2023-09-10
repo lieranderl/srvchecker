@@ -2,11 +2,11 @@ package srv
 
 import (
 	"context"
-	
+
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/grantae/certinfo"
 	"fmt"
+	"github.com/grantae/certinfo"
 
 	"net"
 
@@ -17,60 +17,61 @@ import (
 )
 
 var (
-	mra_srv = []string{"_collab-edge:_tls", "_cuplogin:_tcp", "_cisco-uds:_tcp"}
- 	b2b_srv = []string{"_h323cs:_tcp", "_sip:_tcp", "_sips:_tcp", "_sip:_udp", "_h323ls:_udp"}
+	mra_srv      = []string{"_collab-edge:_tls", "_cuplogin:_tcp", "_cisco-uds:_tcp"}
+	b2b_srv      = []string{"_h323cs:_tcp", "_sip:_tcp", "_sips:_tcp", "_sip:_udp", "_h323ls:_udp"}
 	xmpp_fed_srv = []string{"_xmpp-server:_tcp"}
-	cma_srv = []string{"_xmpp-client:_tcp"}
-	spark_srv = []string{"_sips:_tcp.sipmtls"}
-	mssip_srv = []string{"_sipfederationtls:_tcp"}
-	srvtextlist = map[string][]string{
-		"mra":mra_srv, 
-		"b2b":b2b_srv,
-		"xmpp_fed":xmpp_fed_srv,
-		"cma":cma_srv,
-		"spark":spark_srv,
-		"mssip":mssip_srv,
+	cma_srv      = []string{"_xmpp-client:_tcp"}
+	spark_srv    = []string{"_sips:_tcp.sipmtls"}
+	mssip_srv    = []string{"_sipfederationtls:_tcp"}
+	srvtextlist  = map[string][]string{
+		"mra":      mra_srv,
+		"b2b":      b2b_srv,
+		"xmpp_fed": xmpp_fed_srv,
+		"cma":      cma_srv,
+		"spark":    spark_srv,
+		"mssip":    mssip_srv,
 	}
 )
 
+type Children []*Cert
+
 type DiscoveredSrvRow struct {
-	Srv 		string
-	Fqdn 		string
-	Ip 			string
-	Priority 	string
-	Weight 		string 
-	Port 		uint16
-	Proto 		string
-	IsOpened 	bool
-	Cert 		string
-	Certs 		[]*Cert
+	Srv      string
+	Fqdn     string
+	Ip       string
+	Priority string
+	Weight   string
+	Port     uint16
+	Proto    string
+	IsOpened bool
+	Cert     string
+	Children
 	ServiceName string
 }
 
 type Cert struct {
-	Txt string
-	Cn string
-	Subject string
-	San string
-	KeyUsage []string
+	Txt         string
+	Cn          string
+	Subject     string
+	San         string
+	KeyUsage    []string
 	ExtKeyUsage []string
-	Issuer string
-	NotBefore string
-	NotAfter string
-	Child []*Cert
+	Issuer      string
+	NotBefore   string
+	NotAfter    string
+	Children
 }
 
 type DiscoveredSrvTable []*DiscoveredSrvRow
 
 type inputSRV struct {
-	service 	string
-	proto   	string
-	domain  	string
-	servName 	string
+	service  string
+	proto    string
+	domain   string
+	servName string
 }
 
 type inputSRVlist []inputSRV
-
 
 func (s *inputSRVlist) Init(domain string) {
 	var isrv inputSRV
@@ -82,12 +83,11 @@ func (s *inputSRVlist) Init(domain string) {
 			isrv.service = strings.TrimPrefix(ii[0], "_")
 			isrv.proto = strings.TrimPrefix(ii[1], "_")
 			*s = append(*s, isrv)
-		} 
+		}
 	}
 }
 
-
-func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
+func (ps *DiscoveredSrvRow) Connect_cert(ip string, port string) {
 	timeout := time.Second
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
 	if err != nil {
@@ -96,16 +96,16 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 	if err == nil {
 		defer conn.Close()
 		ps.IsOpened = true
-		certs := GetCert(ip , fmt.Sprint(port))
+		certs := GetCert(ip, fmt.Sprint(port))
 		if certs != nil {
 			ps.Cert = certs[0].Subject.CommonName
 		}
-		for i, cert :=range certs {
+		for i, cert := range certs {
 			c := new(Cert)
 			c.Cn = cert.Subject.CommonName
 			c.Issuer = cert.Issuer.CommonName
 			c.Subject = cert.Subject.String()
-			c.San = strings.Join(cert.DNSNames, ", ") 
+			c.San = strings.Join(cert.DNSNames, ", ")
 			c.NotBefore = cert.NotBefore.String()
 			c.NotAfter = cert.NotAfter.String()
 
@@ -117,31 +117,31 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 					c.ExtKeyUsage = append(c.ExtKeyUsage, "TLS Web Client Authentication")
 				}
 			}
-			
+
 			c.Txt, _ = certinfo.CertificateText(cert)
-			
+
 			if i == 0 {
-				ps.Certs = append(ps.Certs, c)
+				ps.Children = append(ps.Children, c)
 			}
 			if i == 1 {
-	
-				ps.Certs[0].Child = append(ps.Certs[0].Child, c)
+
+				ps.Children[0].Children = append(ps.Children[0].Children, c)
 			}
 			if i == 2 {
 
-				ps.Certs[0].Child[0].Child = append(ps.Certs[0].Child[0].Child, c)
+				ps.Children[0].Children[0].Children = append(ps.Children[0].Children[0].Children, c)
 			}
 			if i == 3 {
-		
-				ps.Certs[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child, c)
+
+				ps.Children[0].Children[0].Children[0].Children = append(ps.Children[0].Children[0].Children[0].Children, c)
 			}
 			if i == 4 {
-				ps.Certs[0].Child[0].Child[0].Child[0].Child = append(ps.Certs[0].Child[0].Child[0].Child[0].Child, c)
+				ps.Children[0].Children[0].Children[0].Children[0].Children = append(ps.Children[0].Children[0].Children[0].Children[0].Children, c)
 			}
 			// if i == 5 {
 			// 	ps.Certs.Child.Child.Child.Child.Child = c
 			// }
-			
+
 		}
 
 	}
@@ -150,24 +150,23 @@ func (ps *DiscoveredSrvRow)Connect_cert(ip string, port string) {
 func GetCert(ip string, port string) []*x509.Certificate {
 
 	conf := tls.Config{InsecureSkipVerify: true}
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout:  2 * time.Second}, "tcp", ip+":"+port, &conf)
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 2 * time.Second}, "tcp", ip+":"+port, &conf)
 	if err == nil {
 		defer conn.Close()
 		certs := conn.ConnectionState().PeerCertificates
-		reversed := make([]*x509.Certificate,0)
+		reversed := make([]*x509.Certificate, 0)
 		for i := range certs {
-				n := certs[len(certs)-1-i]
-				reversed = append(reversed, n)
+			n := certs[len(certs)-1-i]
+			reversed = append(reversed, n)
 		}
 		return reversed
 	}
-    return nil
+	return nil
 }
-
 
 func (s *DiscoveredSrvTable) ForDomain(domain string) {
 	mysrvs := new(inputSRVlist)
-	mysrvs.Init(domain)	
+	mysrvs.Init(domain)
 	var wg sync.WaitGroup
 
 	for _, srv := range *mysrvs {
@@ -175,15 +174,15 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 		if strings.HasPrefix(srv.proto, "t") {
 			proto = "tcp"
 		}
-		cname := "_"+srv.service+"._"+srv.proto+"."+srv.domain
+		cname := "_" + srv.service + "._" + srv.proto + "." + srv.domain
 		_, fqdns, err := net.LookupSRV(srv.service, srv.proto, srv.domain)
-		
+
 		if err != nil {
 			discoveredSrvRow := new(DiscoveredSrvRow)
 			discoveredSrvRow.ServiceName = srv.servName
 			discoveredSrvRow.Srv = cname
-			discoveredSrvRow.Fqdn = "SRV record not configured"		
-			*s = append(*s, discoveredSrvRow)	
+			discoveredSrvRow.Fqdn = "SRV record not configured"
+			*s = append(*s, discoveredSrvRow)
 		} else {
 			for _, fqdn := range fqdns {
 				wg.Add(1)
@@ -199,21 +198,21 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 
 func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, proto string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	
+
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", fqdn.Target)
+	discoveredSrvRow := new(DiscoveredSrvRow)
+	discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured", proto)
 	if err != nil {
-		discoveredSrvRow := new(DiscoveredSrvRow)
-		discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured" ,proto)
-		*d = append(*d, discoveredSrvRow)				
-	} 
-	if len(ips)>0 {
+		*d = append(*d, discoveredSrvRow)
+		return
+	}
+	if len(ips) > 0 {
 		for _, ip := range ips {
-			discoveredSrvRow := new(DiscoveredSrvRow)
-			discoveredSrvRow.Init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, ip.To4().String() ,proto)
+			discoveredSrvRow.Ip = ip.To4().String()
 			if proto == "tcp" {
 				discoveredSrvRow.Connect_cert(ip.To4().String(), fmt.Sprint(fqdn.Port))
 			}
-			*d = append(*d, discoveredSrvRow)				
+			*d = append(*d, discoveredSrvRow)
 		}
 	}
 }

@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
-	"example.com/srvprocess"
+	"github.com/lieranderl/srvchecker"
 	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 )
+
 func main() {
 	ctx := context.Background()
 	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", srvprocess.Srvprocess); err != nil {
