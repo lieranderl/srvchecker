@@ -101,13 +101,10 @@ func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpC
 		addPort := func(port uint16, portType, proto, serviceName string) {
 			for _, existingPort := range tcpConnectivityRow.Ports {
 				if existingPort.Num == port && existingPort.Proto == proto && existingPort.Type == portType {
-					fmt.Println("Port already exists: ", port, portType, proto, serviceName)
 					return
 				}
 			}
 			tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: portType, Proto: proto, ServiceName: serviceName})
-
-			fmt.Println("Added port: ", port, portType, proto, serviceName)
 		}
 
 		if srv.Proto == "tcp" {
@@ -159,44 +156,44 @@ func (p *Port) connection(ip string, wg *sync.WaitGroup) {
 }
 
 func checkTcpConnection(ip string, port string) bool {
-    timeout := time.Second
-    address := net.JoinHostPort(ip, port)
-    conn, err := net.DialTimeout("tcp", address, timeout)
-    if err != nil {
-        return false
-    }
-    defer conn.Close()
-    return true
+	timeout := time.Second
+	address := net.JoinHostPort(ip, port)
+	conn, err := net.DialTimeout("tcp", address, timeout)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
 }
 
 func checkTurnConnection(ip string, port string) bool {
-    timeout := 2 * time.Second
-    allocationRequest := []byte{
-        0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174,
-        0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110,
-        111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0,
-    }
-    expectedResponsePrefix := []byte{1, 19, 0}
-    buf := make([]byte, 16)
+	timeout := 2 * time.Second
+	allocationRequest := []byte{
+		0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174,
+		0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110,
+		111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0,
+	}
+	expectedResponsePrefix := []byte{1, 19, 0}
+	buf := make([]byte, 16)
 
-    address := net.JoinHostPort(ip, port)
-    conn, err := net.DialTimeout("udp", address, timeout)
-    if err != nil {
-        return false
-    }
-    defer conn.Close()
+	address := net.JoinHostPort(ip, port)
+	conn, err := net.DialTimeout("udp", address, timeout)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
 
-    if _, err = conn.Write(allocationRequest); err != nil {
-        return false
-    }
+	if _, err = conn.Write(allocationRequest); err != nil {
+		return false
+	}
 
-    if err = conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-        return false
-    }
+	if err = conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+		return false
+	}
 
-    if _, err = conn.Read(buf); err != nil {
-        return false
-    }
+	if _, err = conn.Read(buf); err != nil {
+		return false
+	}
 
-    return bytes.HasPrefix(buf, expectedResponsePrefix)
+	return bytes.HasPrefix(buf, expectedResponsePrefix)
 }
