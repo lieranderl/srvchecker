@@ -98,33 +98,36 @@ func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpC
 			ipExists[srv.Ip] = tcpConnectivityRow
 		}
 
-		addPort := func(port uint16, isOpened bool, portType, proto, serviceName string) {
+		addPort := func(port uint16, portType, proto, serviceName string) {
 			for _, existingPort := range tcpConnectivityRow.Ports {
-				if existingPort.Num == port && existingPort.Proto == proto && existingPort.Type == portType && existingPort.ServiceName == serviceName {
+				if existingPort.Num == port && existingPort.Proto == proto && existingPort.Type == portType {
+					fmt.Println("Port already exists: ", port, portType, proto, serviceName)
 					return
 				}
 			}
-			tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: isOpened, Type: portType, Proto: proto, ServiceName: serviceName})
+			tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: false, Type: portType, Proto: proto, ServiceName: serviceName})
+
+			fmt.Println("Added port: ", port, portType, proto, serviceName)
 		}
 
 		if srv.Proto == "tcp" {
-			addPort(srv.Port, srv.IsOpened, "service", "tcp", srv.ServiceName)
+			addPort(srv.Port, "service", "tcp", srv.ServiceName)
 		}
 
 		if srv.ServiceName == "mra" {
 			for _, port := range []string{"5061", "5222"} {
-				addPort(parsePort(port), false, "service", "tcp", srv.ServiceName)
+				addPort(parsePort(port), "service", "tcp", srv.ServiceName)
 			}
 		}
 
 		for _, port := range adminPorts {
-			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+			addPort(port.Num, port.Type, port.Proto, srv.ServiceName)
 		}
 		for _, port := range traversalPorts {
-			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+			addPort(port.Num, port.Type, port.Proto, srv.ServiceName)
 		}
 		for _, port := range turnPorts {
-			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+			addPort(port.Num, port.Type, port.Proto, srv.ServiceName)
 		}
 	}
 
