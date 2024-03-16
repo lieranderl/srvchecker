@@ -1,12 +1,11 @@
-package portconnectivity
+package tests
 
 import (
-	"fmt"
 
-	// "sync"
 	"testing"
 
 	"github.com/lieranderl/srvchecker/srv"
+	"github.com/lieranderl/srvchecker/portconnectivity"
 )
 
 func TestPortconnectivity(t *testing.T) {
@@ -15,20 +14,20 @@ func TestPortconnectivity(t *testing.T) {
 	srvresults.ForDomain("cisco.com")
 	
 	for _, res := range *srvresults {
-		fmt.Println("=================")
-		fmt.Println(res)
+		t.Log("=================")
+		t.Log(res)
 	}
 	
-	tcpConnectivityTable := make(TcpConnectivityTable, 0)
+	tcpConnectivityTable := make(portconnectivity.TcpConnectivityTable, 0)
 	tcpConnectivityTable.FetchFromSrv(*srvresults).Connectivity()
 
 
 	for _, row := range tcpConnectivityTable {
-		fmt.Println("=========TCP========")
-		fmt.Println(row.Fqdn)
-		fmt.Println(row.Ip)
+		t.Log("=========TCP========")
+		t.Log(row.Fqdn)
+		t.Log(row.Ip)
 		for _, port := range row.Ports {
-			fmt.Print(port)
+			t.Log(port)
 		}
 	}
 	
