@@ -37,97 +37,102 @@ type TcpConnectivityRow struct {
 
 type TcpConnectivityTable []*TcpConnectivityRow
 
-func containsPorts(ports []*Port, port uint16, proto, t, serv string) bool {
-	for _, p := range ports {
-		if p.Num == port && p.Proto == proto && p.Type == t && p.ServiceName == serv {
-			return true
-		}
-	}
-	return false
-}
+// func containsPorts(ports []*Port, port uint16, proto, t, serv string) bool {
+// 	for _, p := range ports {
+// 		if p.Num == port && p.Proto == proto && p.Type == t && p.ServiceName == serv {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
-func containsTcpConnectivity(s TcpConnectivityTable, ip string) bool {
-	for _, a := range s {
-		if a.Ip == ip {
-			return true
-		}
-	}
-	return false
-}
+// func containsTcpConnectivity(s TcpConnectivityTable, ip string) bool {
+// 	for _, a := range s {
+// 		if a.Ip == ip {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpConnectivityTable {
+	ipExists := make(map[string]*TcpConnectivityRow)
+	for _, tcpConnectivityRow := range *t {
+		ipExists[tcpConnectivityRow.Ip] = tcpConnectivityRow
+	}
 
-	// var wg sync.WaitGroup
-	//Service port check
-	var base = 10
-	var size = 16
+	parsePort := func(portStr string) uint16 {
+		port, err := strconv.ParseUint(portStr, 10, 16)
+		if err != nil {
+			fmt.Printf("Invalid port number: " + err.Error()) // Replace with proper error handling
+			return 0
+		}
+		return uint16(port)
+	}
+
+	adminPorts := make([]*Port, len(admin_known_ports))
+	for i, portStr := range admin_known_ports {
+		adminPorts[i] = &Port{Num: parsePort(portStr), IsOpened: false, Type: "admin", Proto: "tcp"}
+	}
+
+	traversalPorts := make([]*Port, len(traversal_ports))
+	for i, portStr := range traversal_ports {
+		traversalPorts[i] = &Port{Num: parsePort(portStr), IsOpened: false, Type: "traversal", Proto: "tcp"}
+	}
+
+	turnPorts := make([]*Port, len(turn_ports))
+	for i, portStr := range turn_ports {
+		pp := strings.Split(portStr, ":")
+		turnPorts[i] = &Port{Num: parsePort(pp[0]), IsOpened: false, Type: "turn", Proto: pp[1]}
+	}
+
 	for _, srv := range srvres {
-		if strings.Contains(srv.Ip, ".") {
-			if !containsTcpConnectivity(*t, srv.Ip) {
-				tcpConnectivityRow := new(TcpConnectivityRow)
-				tcpConnectivityRow.Fqdn = srv.Fqdn
-				tcpConnectivityRow.Ip = srv.Ip
+		if !strings.Contains(srv.Ip, ".") {
+			continue
+		}
 
-				if srv.Proto == "tcp" {
-					if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
-					}
-				}
+		tcpConnectivityRow, exists := ipExists[srv.Ip]
+		if !exists {
+			tcpConnectivityRow = &TcpConnectivityRow{Fqdn: srv.Fqdn, Ip: srv.Ip, Ports: Ports{}}
+			*t = append(*t, tcpConnectivityRow)
+			ipExists[srv.Ip] = tcpConnectivityRow
+		}
 
-				if srv.ServiceName == "mra" {
-					for _, port := range []string{"5061", "5222"} {
-						port, _ := strconv.ParseUint(port, base, size)
-						if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "service", srv.ServiceName) {
-							tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
-						}
-					}
+		addPort := func(port uint16, isOpened bool, portType, proto, serviceName string) {
+			for _, existingPort := range tcpConnectivityRow.Ports {
+				if existingPort.Num == port && existingPort.Proto == proto && existingPort.Type == portType && existingPort.ServiceName == serviceName {
+					return
 				}
+			}
+			tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: port, IsOpened: isOpened, Type: portType, Proto: proto, ServiceName: serviceName})
+		}
 
-				for _, port := range admin_known_ports {
-					port, _ := strconv.ParseUint(port, base, size)
-					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "admin", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "admin", Proto: "tcp", ServiceName: srv.ServiceName})
-					}
-				}
+		if srv.Proto == "tcp" {
+			addPort(srv.Port, srv.IsOpened, "service", "tcp", srv.ServiceName)
+		}
 
-				for _, port := range traversal_ports {
-					port, _ := strconv.ParseUint(port, base, size)
-					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), "tcp", "traversal", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "traversal", Proto: "tcp", ServiceName: srv.ServiceName})
-					}
-				}
-
-				for _, port := range turn_ports {
-					pp := strings.Split(port, ":")
-					port = pp[0]
-					proto := pp[1]
-					port, _ := strconv.ParseUint(port, base, size)
-					if !containsPorts(tcpConnectivityRow.Ports, uint16(port), proto, "turn", srv.ServiceName) {
-						tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: uint16(port), IsOpened: false, Type: "turn", Proto: proto, ServiceName: srv.ServiceName})
-					}
-				}
-				*t = append(*t, tcpConnectivityRow)
-			} else {
-				if srv.Proto == "tcp" {
-					for _, tcpConnectivityRow := range *t {
-						if tcpConnectivityRow.Ip == srv.Ip {
-							if !containsPorts(tcpConnectivityRow.Ports, srv.Port, "tcp", "service", srv.ServiceName) {
-								tcpConnectivityRow.Ports = append(tcpConnectivityRow.Ports, &Port{Num: srv.Port, IsOpened: srv.IsOpened, Type: "service", Proto: "tcp", ServiceName: srv.ServiceName})
-							}
-						}
-					}
-				}
-
+		if srv.ServiceName == "mra" {
+			for _, port := range []string{"5061", "5222"} {
+				addPort(parsePort(port), false, "service", "tcp", srv.ServiceName)
 			}
 		}
+
+		for _, port := range adminPorts {
+			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+		}
+		for _, port := range traversalPorts {
+			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+		}
+		for _, port := range turnPorts {
+			addPort(port.Num, false, port.Type, port.Proto, srv.ServiceName)
+		}
 	}
+
+	// Consider sorting after all operations if necessary.
 	sort.Slice((*t)[:], func(i, j int) bool {
 		return (*t)[i].Fqdn < (*t)[j].Fqdn
 	})
-
 	return t
-
-	// wg.Wait()
 }
 
 func (t *TcpConnectivityTable) Connectivity() {
@@ -144,44 +149,51 @@ func (t *TcpConnectivityTable) Connectivity() {
 func (p *Port) connection(ip string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if p.Type == "turn" {
-		p.IsOpened = RunTurnCheck(ip, fmt.Sprint(p.Num), p.Proto)
+		p.IsOpened = checkTurnConnection(ip, fmt.Sprint(p.Num))
 	} else {
-		p.IsOpened = CheckConnection(ip, fmt.Sprint(p.Num))
+		p.IsOpened = checkTcpConnection(ip, fmt.Sprint(p.Num))
 	}
 }
 
-func CheckConnection(ip string, port string) bool {
-	timeout := time.Second
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, port), timeout)
-	if err != nil {
-		return false
-	} else {
-		defer conn.Close()
-		return true
-	}
+func checkTcpConnection(ip string, port string) bool {
+    timeout := time.Second
+    address := net.JoinHostPort(ip, port)
+    conn, err := net.DialTimeout("tcp", address, timeout)
+    if err != nil {
+        return false
+    }
+    defer conn.Close()
+    return true
 }
 
-func checkTurnPort(ip string, port string, proto string) bool {
-	allocation_request := []byte{0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174, 0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110, 111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0}
-	buf := make([]byte, 16)
-	var err error
-	conn, err := net.DialTimeout("udp", ip+":"+port, 2*time.Second)
-	if err != nil {
-		return false
-	} else {
-		defer conn.Close()
-		conn.Write(allocation_request)
-		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-		conn.Read(buf)
-		if bytes.HasPrefix(buf, []byte{1, 19, 0}) {
-			return true
-		} else {
-			return false
-		}
+func checkTurnConnection(ip string, port string) bool {
+    timeout := 2 * time.Second
+    allocationRequest := []byte{
+        0, 3, 0, 36, 33, 18, 164, 66, 153, 147, 70, 130, 126, 38, 40, 41, 228, 206, 31, 174,
+        0, 25, 0, 4, 17, 0, 0, 0, 0, 13, 0, 4, 0, 0, 2, 88, 128, 34, 0, 5, 65, 99, 97, 110,
+        111, 0, 0, 0, 0, 23, 0, 4, 1, 0, 0, 0,
+    }
+    expectedResponsePrefix := []byte{1, 19, 0}
+    buf := make([]byte, 16)
 
-	}
-}
+    address := net.JoinHostPort(ip, port)
+    conn, err := net.DialTimeout("udp", address, timeout)
+    if err != nil {
+        return false
+    }
+    defer conn.Close()
 
-func RunTurnCheck(ip string, port string, proto string) bool {
-	return checkTurnPort(ip, port, proto)
+    if _, err = conn.Write(allocationRequest); err != nil {
+        return false
+    }
+
+    if err = conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+        return false
+    }
+
+    if _, err = conn.Read(buf); err != nil {
+        return false
+    }
+
+    return bytes.HasPrefix(buf, expectedResponsePrefix)
 }
