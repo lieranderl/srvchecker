@@ -37,24 +37,6 @@ type TcpConnectivityRow struct {
 
 type TcpConnectivityTable []*TcpConnectivityRow
 
-// func containsPorts(ports []*Port, port uint16, proto, t, serv string) bool {
-// 	for _, p := range ports {
-// 		if p.Num == port && p.Proto == proto && p.Type == t && p.ServiceName == serv {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// func containsTcpConnectivity(s TcpConnectivityTable, ip string) bool {
-// 	for _, a := range s {
-// 		if a.Ip == ip {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
 func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpConnectivityTable {
 	ipExists := make(map[string]*TcpConnectivityRow)
 	for _, tcpConnectivityRow := range *t {
