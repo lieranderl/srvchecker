@@ -84,14 +84,17 @@ func (d *DiscoveredSrvRow) init(cname, servName, priority, weight, fqdn string, 
 func (d *DiscoveredSrvTable) fetchIps(servName, cname string, fqdn *net.SRV, proto string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ips, err := net.DefaultResolver.LookupIP(context.Background(), "ip4", fqdn.Target)
-	discoveredSrvRow := new(DiscoveredSrvRow)
-	discoveredSrvRow.init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured", proto)
+
 	if err != nil {
+		discoveredSrvRow := new(DiscoveredSrvRow)
+		discoveredSrvRow.init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured", proto)
 		*d = append(*d, discoveredSrvRow)
 		return
 	}
 	if len(ips) > 0 {
 		for _, ip := range ips {
+			discoveredSrvRow := new(DiscoveredSrvRow)
+			discoveredSrvRow.init(cname, servName, fmt.Sprint(fqdn.Priority), fmt.Sprint(fqdn.Weight), fqdn.Target, fqdn.Port, "A record not configured", proto)
 			discoveredSrvRow.Ip = ip.To4().String()
 			if proto == "tcp" {
 				discoveredSrvRow.Connect_cert(ip.To4().String(), fmt.Sprint(fqdn.Port))
@@ -135,6 +138,6 @@ func (s *DiscoveredSrvTable) ForDomain(domain string) {
 
 	// Perform sorting.
 	sort.Slice(*s, func(i, j int) bool {
-		return (*s)[i].Srv < (*s)[j].Srv
+		return (*s)[i].Srv <= (*s)[j].Srv
 	})
 }
