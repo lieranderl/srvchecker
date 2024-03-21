@@ -32,12 +32,15 @@ type inputSRV struct {
 }
 
 var SRVTextList = map[string][]string{
-	"mra":      {"_collab-edge:_tls", "_cuplogin:_tcp", "_cisco-uds:_tcp"},
-	"b2b":      {"_h323cs:_tcp", "_sip:_tcp", "_sips:_tcp", "_sip:_udp", "_h323ls:_udp"},
-	"xmpp_fed": {"_xmpp-server:_tcp"},
-	"cma":      {"_xmpp-client:_tcp"},
-	"spark":    {"_sips:_tcp.sipmtls"},
-	"mssip":    {"_sipfederationtls:_tcp"},
+	"mra":          {"_collab-edge._tls", "_cuplogin._tcp", "_cisco-uds._tcp"},
+	"b2b":          {"_h323cs._tcp", "_sip._tcp", "_sips._tcp", "_sip._udp", "_h323ls._udp"},
+	"xmpp_fed":     {"_xmpp-server._tcp"},
+	"cma":          {"_xmpp-client._tcp"},
+	"spark":        {"_sips._tcp.sipmtls"},
+	"mssip":        {"_sipfederationtls._tcp"},
+	"webexmessage": {"_webexconnect._tcp"},
+	"mail":         {"_autodiscover._tcp", "_smtp._tcp", "_imaps._tcp", "_pop3s._tcp", "_submission._tcp"},
+	"ftps":         {"_ftps._tcp"},
 }
 
 type inputSRVlist []inputSRV
@@ -57,8 +60,8 @@ func (s *inputSRVlist) init(domain string) {
 	for serviceName, srvEntries := range SRVTextList {
 		isrv.servName = serviceName
 		for _, srvEntry := range srvEntries {
-			parts := strings.Split(srvEntry, ":")
-			if len(parts) != 2 {
+			parts := strings.Split(srvEntry, ".")
+			if len(parts) < 2 {
 				// Handle the error according to your application's needs.
 				// For example, log an error message or continue to the next entry.
 				continue

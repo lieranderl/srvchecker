@@ -18,6 +18,7 @@ import (
 var admin_known_ports = []string{"443", "80", "22"}
 var traversal_ports = []string{"7001", "2222"}
 var turn_ports = []string{"443:tcp", "3478:tcp", "3478:udp"}
+var mra_ports = []string{"5061", "5222"}
 
 type Port struct {
 	IsOpened    bool
@@ -94,7 +95,7 @@ func (t *TcpConnectivityTable) FetchFromSrv(srvres srv.DiscoveredSrvTable) *TcpC
 		}
 
 		if srv.ServiceName == "mra" {
-			for _, port := range []string{"5061", "5222"} {
+			for _, port := range mra_ports {
 				addPort(parsePort(port), "service", "tcp", srv.ServiceName)
 			}
 		}
