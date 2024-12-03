@@ -1,14 +1,14 @@
 module github.com/lieranderl/srvchecker
 
-go 1.22.1
+go 1.23
 
 require (
-	github.com/GoogleCloudPlatform/functions-framework-go v1.8.1
+	github.com/GoogleCloudPlatform/functions-framework-go v1.9.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 )
 
 require (
-	cloud.google.com/go/functions v1.16.1 // indirect
+	cloud.google.com/go/functions v1.19.2 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.15.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
