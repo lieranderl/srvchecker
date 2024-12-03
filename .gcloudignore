@@ -3,3 +3,4 @@ cmd/**
 .gcloudignore
 .gitignore
 gcloud-deploy.sh
+.env
