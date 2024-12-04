@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  srvchecker:
+    container_name: $FUNCTION_NAME
+    image: $AWS_ECR/$FUNCTION_NAME:$IMAGE_TAG
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+
