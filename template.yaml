@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  SrvckeckerProcess:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 256
+      PackageType: Image
+      Architectures:
+        - arm64
+      Events:
+        RootEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: any
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
+    Metadata:
+      DockerTag: !Ref ImageTag
+      DockerContext: ./
+      Dockerfile: Dockerfile
+
+Outputs:
+  SrvckeckerProcessURL:
+    Description: "API Gateway endpoint URL for Bun"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+
+Parameters:
+  ImageTag:
+    Type: String

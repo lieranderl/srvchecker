@@ -26,6 +26,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/aws/ma
 # run builded binary in golang AS runner
 
 FROM amazonlinux:latest
+ENV PORT=8000
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
 
 # Install necessary packages
 RUN yum -y update && \
@@ -33,12 +35,11 @@ RUN yum -y update && \
     yum clean all
 
 # Create a group and user
-RUN groupadd -r app && useradd -r -g app app
-
+# RUN groupadd -r app && useradd -r -g app app
 
 # Tell docker that all future commands should run as the app user
-USER app
-WORKDIR /app
-COPY --from=builder /app/main .
-EXPOSE 8080
+# USER app
+WORKDIR /var/task
+COPY --from=builder /app/main /var/task/main
+EXPOSE $PORT
 CMD ["./main"]

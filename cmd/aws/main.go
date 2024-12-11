@@ -1,13 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"log"
+	"net/http"
+	"os"
 	"time"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/lieranderl/srvchecker/portconnectivity"
 	"github.com/lieranderl/srvchecker/srv"
 )
@@ -39,30 +38,22 @@ func processDomain(domain string) (*srv.DiscoveredSrvTable, portconnectivity.Tcp
 	return srvResults, connectivityTable
 }
 
-func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	// Log the incoming event
-	log.Printf("Received event: %+v\n", event)
-
+func mainHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the JSON payload
 	var input inputRequest
-	if err := json.Unmarshal([]byte(event.Body), &input); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&input); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		log.Printf("Failed to parse JSON payload: %v\n", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Headers: map[string]string{
-				"Content-Type": "text/plain",
-			},
-			Body:       "Invalid JSON payload",
-		}, nil
+		return
 	}
+	defer r.Body.Close()
 
 	// Validate the input
 	if input.Domain == "" {
+		http.Error(w, "Domain is required", http.StatusBadRequest)
 		log.Println("Domain is required but missing")
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Domain is required",
-		}, nil
+		return
 	}
 
 	// Start processing
@@ -85,26 +76,33 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 	}
 
 	// Encode the response as JSON
-	responseBody, err := json.Marshal(response)
-	if err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to process response", http.StatusInternalServerError)
 		log.Printf("Failed to encode JSON response: %v\n", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Failed to process response",
-		}, nil
+		return
 	}
-
-	// Return the API Gateway response
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(responseBody),
-	}, nil
 }
 
 func main() {
-	// Start the Lambda function
-	lambda.Start(handler)
+	// Create a new ServeMux
+	mux := http.NewServeMux()
+	// Register the POST / route
+	mux.HandleFunc("POST /", mainHandler)
+
+	// get port from environment variable or use default 8080
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+
+	// Start the server
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+	log.Printf("Server is listening on port %s...\n", port)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("Failed to start server: %v\n", err)
+	}
 }

@@ -4,7 +4,6 @@ go 1.23
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.0
-	github.com/aws/aws-lambda-go v1.47.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 )
 
