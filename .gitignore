@@ -2,3 +2,4 @@
 *.zip
 .env
 .aws-sam
+samconfig.toml
