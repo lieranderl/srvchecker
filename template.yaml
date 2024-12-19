@@ -20,12 +20,7 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /
-            Method: any
-        ProxyEvent:
-          Type: HttpApi
-          Properties:
-            Path: /{proxy+}
-            Method: any
+            Method: POST
     Metadata:
       DockerTag: !Ref ImageTag
       DockerContext: ./
