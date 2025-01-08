@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  SrvcheckerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      PackageType: Image
+      Events:
+        PostEvent:
+          Type: HttpApi
+          Properties:
+            Path: /*
+            Method: POST
+      Environment:
+        Variables:
+          ENV: !Ref Env
+      AutoPublishAlias: !Ref Env
+      DeploymentPreference:
+        Type: Canary10Percent10Minutes
+        Alarms:
+          - !Ref AliasErrorMetricGreaterThanZeroAlarm
+          - !Ref LatencyAlarm
+
+  AliasErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Lambda function error rate > 0
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 300
+      Statistic: Sum
+      Threshold: 0
+
+  LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Lambda function P90 latency > 1 second
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Period: 300
+      ExtendedStatistic: p90
+      Threshold: 1000
+
+Outputs:
+  SrvcheckerFunctionURL:
+    Description: "API Gateway endpoint URL for Bun"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+
+Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: The deployment environment
+
+  # VpcId:
+  #   Type: AWS::EC2::VPC::Id
+  #   Description: VPC for Lambda function
+
+  # SubnetIds:
+  #   Type: List<AWS::EC2::Subnet::Id>
+  #   Description: Subnets for Lambda function

@@ -7,19 +7,14 @@ help:
 	@echo "  make help      - Display this help message"
 	@echo "  make deploy    - Deploy to AWS Lambda serverless"
 
-build:
-	@echo "Building..."
-	sam build \
-		--parameter-overrides ImageTag=$(TAG)
-
 ## deploy to AWS lambda
+# Default to dev environment if not specified
+ENV ?= dev
+
+# Target to build and deploy
 deploy:
-	@echo "Deploying to AWS Lambda..."
-	sam build \
-		--parameter-overrides ImageTag=$(TAG) \
-		&& \
-	sam deploy \
-		--parameter-overrides ImageTag=$(TAG)
+	sam build
+	sam deploy --config-env $(ENV)
 
 local:
 	@echo "Running locally..."
