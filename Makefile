@@ -13,8 +13,7 @@ ENV ?= dev
 
 # Target to build and deploy
 deploy:
-	sam build
-	sam deploy --config-env $(ENV)
+	sam deploy -t infra/template.yaml --config-env $(ENV)  --resolve-image-repos
 
 local:
 	@echo "Running locally..."

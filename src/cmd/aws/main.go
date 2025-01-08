@@ -19,6 +19,7 @@ type inputRequest struct {
 
 // responseData defines the structure for the JSON response
 type responseData struct {
+	Env  		 string `json:"env"`
 	Code         int                                   `json:"code"`
 	ElapsedTime  string                                `json:"elapsedTime"`
 	Srv          *srv.DiscoveredSrvTable               `json:"srv"`
@@ -69,6 +70,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare the response
 	response := responseData{
+		Env: "DEV",
 		Code:         200,
 		ElapsedTime:  elapsedTime,
 		Srv:          srvResults,

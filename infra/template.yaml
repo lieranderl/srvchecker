@@ -8,17 +8,37 @@ Globals:
     Timeout: 10
 
 Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+
+  HttpApiStageDev:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: dev
+      AutoDeploy: true
+
+  HttpApiStageProd:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: prod
+      AutoDeploy: true
+
   SrvcheckerFunction:
     Type: AWS::Serverless::Function
     Properties:
       MemorySize: 128
       PackageType: Image
+      ImageUri: !Ref ImageUri
       Events:
         PostEvent:
           Type: HttpApi
           Properties:
-            Path: /*
+            Path: /
             Method: POST
+            ApiId:
+              Ref: HttpApi
       Environment:
         Variables:
           ENV: !Ref Env
@@ -53,10 +73,10 @@ Resources:
       ExtendedStatistic: p90
       Threshold: 1000
 
-Outputs:
-  SrvcheckerFunctionURL:
-    Description: "API Gateway endpoint URL for Bun"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+# Outputs:
+#   SrvcheckerFunctionURL:
+#     Description: "API Gateway endpoint URL for Bun"
+#     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
 
 Parameters:
   Env:
@@ -67,10 +87,5 @@ Parameters:
       - prod
     Description: The deployment environment
 
-  # VpcId:
-  #   Type: AWS::EC2::VPC::Id
-  #   Description: VPC for Lambda function
-
-  # SubnetIds:
-  #   Type: List<AWS::EC2::Subnet::Id>
-  #   Description: Subnets for Lambda function
+  ImageUri:
+    Type: String
